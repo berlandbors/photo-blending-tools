@@ -82,6 +82,54 @@ const loadingOverlay = $('loading-overlay');
 const statusMsg      = $('status-message');
 
 /* ══════════════════════════════════════════════════
+   Состояние живого предпросмотра
+══════════════════════════════════════════════════ */
+let livePreviewEnabled = localStorage.getItem('livePreview') !== 'false';
+
+/* ══════════════════════════════════════════════════
+   История состояний (Undo/Redo)
+══════════════════════════════════════════════════ */
+const history = {
+    states: [],
+    currentIndex: -1,
+    maxSize: 20
+};
+
+/* ══════════════════════════════════════════════════
+   Режим сравнения До/После
+══════════════════════════════════════════════════ */
+let comparisonMode   = false;
+let comparisonBefore = null; // canvas с «до»
+let comparisonAfter  = null; // canvas с «после»
+
+/* ══════════════════════════════════════════════════
+   Zoom & Pan
+══════════════════════════════════════════════════ */
+let zoomLevel  = 1;
+let panX       = 0;
+let panY       = 0;
+let isPanning  = false;
+let spaceDown  = false;
+let panStartX  = 0;
+let panStartY  = 0;
+
+/* ══════════════════════════════════════════════════
+   Пресеты
+══════════════════════════════════════════════════ */
+const presets = JSON.parse(localStorage.getItem('presets')) || [];
+
+/* ══════════════════════════════════════════════════
+   Избранные режимы
+══════════════════════════════════════════════════ */
+let favoriteModes = JSON.parse(localStorage.getItem('favoriteModes')) || [];
+
+/* ══════════════════════════════════════════════════
+   Ресайз панели
+══════════════════════════════════════════════════ */
+let isResizing = false;
+let panelWidth = parseInt(localStorage.getItem('panelWidth'), 10) || 340;
+
+/* ══════════════════════════════════════════════════
    Утилиты
 ══════════════════════════════════════════════════ */
 
@@ -354,7 +402,7 @@ async function handleFile(file, slot) {
             updateImageInfo(2);
         }
         showStatus(`Изображение ${slot} загружено (${img.naturalWidth}×${img.naturalHeight} px)`, 'success');
-        debouncedApply();
+        if (livePreviewEnabled) debouncedApply();
     } catch (err) {
         showStatus(err.message, 'error');
     } finally {
@@ -372,7 +420,7 @@ async function handleFile(file, slot) {
 function setupSlider(slider, display, suffix = '%') {
     const update = () => {
         display.textContent = slider.value + suffix;
-        debouncedApply();
+        if (livePreviewEnabled) debouncedApply();
     };
     slider.addEventListener('input', update);
     /* Начальное отображение */
@@ -449,6 +497,8 @@ function apply() {
         if (brightness !== 0 || contrast !== 100) {
             window.BlendingEngine.applyBrightnessContrast(resultCanvas, brightness, contrast);
         }
+
+        saveState();
 
     } catch (err) {
         showStatus('Ошибка обработки: ' + err.message, 'error');
@@ -866,6 +916,632 @@ function drawPlaceholder() {
 }
 
 /* ══════════════════════════════════════════════════
+   Утилита: обновить отображение всех слайдеров
+══════════════════════════════════════════════════ */
+
+function updateAllSliderValues() {
+    opacityValue.textContent     = opacitySlider.value + '%';
+    brightnessValue.textContent  = brightnessSlider.value;
+    contrastValue.textContent    = contrastSlider.value + '%';
+    blendAmountValue.textContent = blendAmountSlider.value + '%';
+}
+
+/* ══════════════════════════════════════════════════
+   История состояний (Undo/Redo)
+══════════════════════════════════════════════════ */
+
+function saveState() {
+    if (resultCanvas.width === 0 || resultCanvas.height === 0) return;
+
+    const currentState = {
+        mode:        modeSelect.value,
+        opacity:     opacitySlider.value,
+        brightness:  brightnessSlider.value,
+        contrast:    contrastSlider.value,
+        blendAmount: blendAmountSlider.value,
+        layerOrder:  state.layerOrder,
+        canvasData:  resultCanvas.toDataURL()
+    };
+
+    /* Удалить все состояния после текущего */
+    history.states = history.states.slice(0, history.currentIndex + 1);
+    history.states.push(currentState);
+
+    if (history.states.length > history.maxSize) {
+        history.states.shift();
+    } else {
+        history.currentIndex++;
+    }
+
+    updateHistoryButtons();
+}
+
+function undo() {
+    if (history.currentIndex > 0) {
+        history.currentIndex--;
+        restoreState(history.states[history.currentIndex]);
+        updateHistoryButtons();
+    }
+}
+
+function redo() {
+    if (history.currentIndex < history.states.length - 1) {
+        history.currentIndex++;
+        restoreState(history.states[history.currentIndex]);
+        updateHistoryButtons();
+    }
+}
+
+function restoreState(savedState) {
+    modeSelect.value         = savedState.mode;
+    opacitySlider.value      = savedState.opacity;
+    brightnessSlider.value   = savedState.brightness;
+    contrastSlider.value     = savedState.contrast;
+    blendAmountSlider.value  = savedState.blendAmount;
+    state.layerOrder         = savedState.layerOrder;
+
+    updateAllSliderValues();
+    updateSliderVisibility();
+
+    /* Обновить radio-кнопку порядка слоев */
+    document.querySelectorAll('input[name="layer-order"]').forEach(r => {
+        r.checked = r.value === savedState.layerOrder;
+    });
+
+    /* Восстановить canvas */
+    const img = new Image();
+    img.onload = () => {
+        resultCanvas.width  = img.naturalWidth;
+        resultCanvas.height = img.naturalHeight;
+        resultCtx.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
+        resultCtx.drawImage(img, 0, 0);
+    };
+    img.src = savedState.canvasData;
+}
+
+function updateHistoryButtons() {
+    const undoBtn = $('undo-btn');
+    const redoBtn = $('redo-btn');
+    if (undoBtn) undoBtn.disabled = history.currentIndex <= 0;
+    if (redoBtn) redoBtn.disabled = history.currentIndex >= history.states.length - 1;
+}
+
+/* ══════════════════════════════════════════════════
+   Режим сравнения До/После
+══════════════════════════════════════════════════ */
+
+function toggleComparisonMode() {
+    if (!comparisonMode) {
+        /* Нужны оба изображения */
+        if (!state.image1 || !state.image2) {
+            showStatus('Для режима сравнения нужны оба изображения.', 'info');
+            return;
+        }
+        /* Сохраняем «до» — первое изображение в размере текущего canvas */
+        comparisonBefore = document.createElement('canvas');
+        comparisonBefore.width  = resultCanvas.width;
+        comparisonBefore.height = resultCanvas.height;
+        const s1 = getScaledSource(1);
+        if (s1) {
+            comparisonBefore.getContext('2d').drawImage(
+                s1.src, 0, 0, resultCanvas.width, resultCanvas.height);
+        }
+        /* Сохраняем «после» — текущий результат */
+        comparisonAfter = document.createElement('canvas');
+        comparisonAfter.width  = resultCanvas.width;
+        comparisonAfter.height = resultCanvas.height;
+        comparisonAfter.getContext('2d').drawImage(resultCanvas, 0, 0);
+
+        comparisonMode = true;
+        $('comparison-overlay').hidden = false;
+        $('comparison-toggle-btn').classList.add('active');
+        updateComparisonView(50);
+    } else {
+        comparisonMode = false;
+        $('comparison-overlay').hidden = true;
+        $('comparison-toggle-btn').classList.remove('active');
+        /* Восстановить полный результат */
+        if (comparisonAfter) {
+            resultCanvas.width  = comparisonAfter.width;
+            resultCanvas.height = comparisonAfter.height;
+            resultCtx.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
+            resultCtx.drawImage(comparisonAfter, 0, 0);
+        }
+    }
+}
+
+function updateComparisonView(position) {
+    if (!comparisonBefore || !comparisonAfter) return;
+
+    const splitX = Math.round((position / 100) * resultCanvas.width);
+
+    resultCtx.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
+
+    /* Левая часть — «до» */
+    resultCtx.save();
+    resultCtx.beginPath();
+    resultCtx.rect(0, 0, splitX, resultCanvas.height);
+    resultCtx.clip();
+    resultCtx.drawImage(comparisonBefore, 0, 0);
+    resultCtx.restore();
+
+    /* Правая часть — «после» */
+    resultCtx.save();
+    resultCtx.beginPath();
+    resultCtx.rect(splitX, 0, resultCanvas.width - splitX, resultCanvas.height);
+    resultCtx.clip();
+    resultCtx.drawImage(comparisonAfter, 0, 0);
+    resultCtx.restore();
+
+    /* Обновить позицию разделителя */
+    const divider = $('comparison-divider');
+    if (divider) divider.style.left = `${position}%`;
+}
+
+/* ══════════════════════════════════════════════════
+   Пресеты
+══════════════════════════════════════════════════ */
+
+function savePreset() {
+    const name = prompt('Название пресета:');
+    if (!name) return;
+
+    const preset = {
+        id:          Date.now(),
+        name:        name,
+        mode:        modeSelect.value,
+        opacity:     opacitySlider.value,
+        brightness:  brightnessSlider.value,
+        contrast:    contrastSlider.value,
+        blendAmount: blendAmountSlider.value,
+        layerOrder:  state.layerOrder
+    };
+
+    presets.push(preset);
+    localStorage.setItem('presets', JSON.stringify(presets));
+    renderPresets();
+    showStatus(`Пресет «${name}» сохранён.`, 'success');
+}
+
+function loadPreset(presetId) {
+    const preset = presets.find(p => p.id === presetId);
+    if (!preset) return;
+
+    modeSelect.value         = preset.mode;
+    opacitySlider.value      = preset.opacity;
+    brightnessSlider.value   = preset.brightness;
+    contrastSlider.value     = preset.contrast;
+    blendAmountSlider.value  = preset.blendAmount;
+    state.layerOrder         = preset.layerOrder;
+
+    document.querySelectorAll('input[name="layer-order"]').forEach(r => {
+        r.checked = r.value === preset.layerOrder;
+    });
+
+    updateAllSliderValues();
+    updateSliderVisibility();
+
+    if (livePreviewEnabled && state.image1 && state.image2) {
+        debouncedApply();
+    }
+    showStatus(`Пресет «${preset.name}» применён.`, 'success');
+}
+
+function deletePreset(presetId) {
+    if (!confirm('Удалить этот пресет?')) return;
+    const index = presets.findIndex(p => p.id === presetId);
+    if (index !== -1) {
+        const name = presets[index].name;
+        presets.splice(index, 1);
+        localStorage.setItem('presets', JSON.stringify(presets));
+        renderPresets();
+        showStatus(`Пресет «${name}» удалён.`, 'info');
+    }
+}
+
+function renderPresets() {
+    const list = $('presets-list');
+    if (!list) return;
+    list.innerHTML = '';
+
+    if (presets.length === 0) {
+        list.innerHTML = '<p style="font-size:0.8rem;color:var(--color-text-muted);text-align:center;padding:8px 0;">Нет сохранённых пресетов</p>';
+        return;
+    }
+
+    presets.forEach(preset => {
+        const item = document.createElement('div');
+        item.className = 'preset-item';
+        item.innerHTML = `
+            <span class="preset-name" title="${preset.name}">${preset.name}</span>
+            <button class="preset-load-btn" data-id="${preset.id}" type="button">Применить</button>
+            <button class="preset-delete-btn" data-id="${preset.id}" type="button" title="Удалить">🗑️</button>
+        `;
+        list.appendChild(item);
+    });
+
+    list.querySelectorAll('.preset-load-btn').forEach(btn => {
+        btn.addEventListener('click', e => loadPreset(parseInt(e.currentTarget.dataset.id, 10)));
+    });
+    list.querySelectorAll('.preset-delete-btn').forEach(btn => {
+        btn.addEventListener('click', e => deletePreset(parseInt(e.currentTarget.dataset.id, 10)));
+    });
+}
+
+/* ══════════════════════════════════════════════════
+   Избранные режимы смешивания
+══════════════════════════════════════════════════ */
+
+function toggleFavoriteMode(modeValue) {
+    const index = favoriteModes.indexOf(modeValue);
+    if (index === -1) {
+        favoriteModes.push(modeValue);
+    } else {
+        favoriteModes.splice(index, 1);
+    }
+    localStorage.setItem('favoriteModes', JSON.stringify(favoriteModes));
+    renderFavorites();
+}
+
+function renderFavorites() {
+    const options = Array.from(modeSelect.options);
+    options.forEach(opt => {
+        /* Убрать старую звёздочку */
+        opt.textContent = opt.textContent.replace(/^⭐\s/, '');
+        if (favoriteModes.includes(opt.value)) {
+            opt.textContent = '⭐ ' + opt.textContent;
+        }
+    });
+
+    /* Переставить избранные опции вверх (внутри своей optgroup) */
+    const groups = Array.from(modeSelect.querySelectorAll('optgroup'));
+    groups.forEach(group => {
+        const opts = Array.from(group.querySelectorAll('option'));
+        opts.sort((a, b) => {
+            const aFav = favoriteModes.includes(a.value);
+            const bFav = favoriteModes.includes(b.value);
+            if (aFav && !bFav) return -1;
+            if (!aFav && bFav) return 1;
+            return 0;
+        });
+        opts.forEach(o => group.appendChild(o));
+    });
+}
+
+/* ══════════════════════════════════════════════════
+   Поиск по режимам смешивания
+══════════════════════════════════════════════════ */
+
+function setupModeSearch() {
+    const modeSearch = $('mode-search');
+    if (!modeSearch) return;
+
+    modeSearch.addEventListener('input', e => {
+        const term = e.target.value.toLowerCase().trim();
+        Array.from(modeSelect.options).forEach(opt => {
+            const text = opt.textContent.toLowerCase();
+            opt.style.display = (!term || text.includes(term)) ? '' : 'none';
+        });
+    });
+
+    /* Сбросить фильтр при выборе */
+    modeSelect.addEventListener('change', () => {
+        modeSearch.value = '';
+        Array.from(modeSelect.options).forEach(opt => { opt.style.display = ''; });
+    });
+}
+
+/* ══════════════════════════════════════════════════
+   Ресайз боковой панели
+══════════════════════════════════════════════════ */
+
+function setupPanelResize() {
+    const panelResizer    = $('panel-resizer');
+    const panelCollapseBtn = $('panel-collapse-btn');
+    const appContainer    = document.querySelector('.app-container');
+    if (!panelResizer || !appContainer) return;
+
+    /* Применить сохранённую ширину */
+    document.documentElement.style.setProperty('--panel-width', `${panelWidth}px`);
+
+    /* Восстановить состояние коллапса */
+    if (localStorage.getItem('panelCollapsed') === 'true') {
+        appContainer.classList.add('panel-collapsed');
+    }
+
+    /* Ресайз */
+    panelResizer.addEventListener('mousedown', () => {
+        isResizing = true;
+        panelResizer.classList.add('resizing');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+    });
+
+    document.addEventListener('mousemove', e => {
+        if (!isResizing) return;
+        const container = appContainer.getBoundingClientRect();
+        panelWidth = Math.max(240, Math.min(600, e.clientX - container.left));
+        document.documentElement.style.setProperty('--panel-width', `${panelWidth}px`);
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (isResizing) {
+            isResizing = false;
+            panelResizer.classList.remove('resizing');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            localStorage.setItem('panelWidth', panelWidth);
+        }
+    });
+
+    /* Коллапс */
+    if (panelCollapseBtn) {
+        panelCollapseBtn.addEventListener('click', () => {
+            appContainer.classList.toggle('panel-collapsed');
+            localStorage.setItem('panelCollapsed',
+                appContainer.classList.contains('panel-collapsed'));
+        });
+    }
+}
+
+/* ══════════════════════════════════════════════════
+   Zoom & Pan
+══════════════════════════════════════════════════ */
+
+function applyCanvasTransform() {
+    resultCanvas.style.transform = `translate(${panX}px, ${panY}px) scale(${zoomLevel})`;
+}
+
+function setupZoomPan() {
+    /* Колесо мыши — масштаб */
+    resultCanvas.addEventListener('wheel', e => {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? 0.9 : 1.1;
+        zoomLevel = Math.max(0.1, Math.min(5, zoomLevel * delta));
+        applyCanvasTransform();
+    }, { passive: false });
+
+    /* Space — включить режим перемещения */
+    document.addEventListener('keydown', e => {
+        if (e.code === 'Space' && e.target.tagName !== 'INPUT'
+                && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'SELECT') {
+            e.preventDefault();
+            spaceDown = true;
+            resultCanvas.style.cursor = 'grab';
+        }
+    });
+    document.addEventListener('keyup', e => {
+        if (e.code === 'Space') {
+            spaceDown = false;
+            if (!isPanning) resultCanvas.style.cursor = '';
+        }
+    });
+
+    resultCanvas.addEventListener('mousedown', e => {
+        if (e.button === 0 && spaceDown) {
+            isPanning  = true;
+            panStartX  = e.clientX - panX;
+            panStartY  = e.clientY - panY;
+            resultCanvas.style.cursor = 'grabbing';
+        }
+    });
+
+    document.addEventListener('mousemove', e => {
+        if (isPanning) {
+            panX = e.clientX - panStartX;
+            panY = e.clientY - panStartY;
+            applyCanvasTransform();
+        }
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (isPanning) {
+            isPanning = false;
+            resultCanvas.style.cursor = spaceDown ? 'grab' : '';
+        }
+    });
+
+    /* Кнопки zoom */
+    const zoomControls = document.createElement('div');
+    zoomControls.className = 'zoom-controls';
+
+    const zoomInBtn = document.createElement('button');
+    zoomInBtn.type      = 'button';
+    zoomInBtn.className = 'zoom-btn zoom-in-btn';
+    zoomInBtn.title     = 'Увеличить';
+    zoomInBtn.textContent = '+';
+    zoomInBtn.addEventListener('click', () => {
+        zoomLevel = Math.min(5, zoomLevel * 1.2);
+        applyCanvasTransform();
+    });
+
+    const zoomOutBtn = document.createElement('button');
+    zoomOutBtn.type      = 'button';
+    zoomOutBtn.className = 'zoom-btn zoom-out-btn';
+    zoomOutBtn.title     = 'Уменьшить';
+    zoomOutBtn.textContent = '−';
+    zoomOutBtn.addEventListener('click', () => {
+        zoomLevel = Math.max(0.1, zoomLevel * 0.8);
+        applyCanvasTransform();
+    });
+
+    const zoomResetBtn = document.createElement('button');
+    zoomResetBtn.type      = 'button';
+    zoomResetBtn.className = 'zoom-btn zoom-reset-btn';
+    zoomResetBtn.title     = 'Сбросить масштаб';
+    zoomResetBtn.textContent = '100%';
+    zoomResetBtn.addEventListener('click', () => {
+        zoomLevel = 1;
+        panX = 0;
+        panY = 0;
+        applyCanvasTransform();
+    });
+
+    zoomControls.appendChild(zoomOutBtn);
+    zoomControls.appendChild(zoomResetBtn);
+    zoomControls.appendChild(zoomInBtn);
+
+    const resultPanel = document.querySelector('.result-panel');
+    if (resultPanel) resultPanel.appendChild(zoomControls);
+}
+
+/* ══════════════════════════════════════════════════
+   Горячие клавиши
+══════════════════════════════════════════════════ */
+
+function selectPreviousMode() {
+    const idx = modeSelect.selectedIndex;
+    if (idx > 0) {
+        modeSelect.selectedIndex = idx - 1;
+        modeSelect.dispatchEvent(new Event('change'));
+    }
+}
+
+function selectNextMode() {
+    const idx = modeSelect.selectedIndex;
+    if (idx < modeSelect.options.length - 1) {
+        modeSelect.selectedIndex = idx + 1;
+        modeSelect.dispatchEvent(new Event('change'));
+    }
+}
+
+function showKeyboardShortcuts() {
+    const text = [
+        'Горячие клавиши:',
+        'Ctrl+O — Загрузить изображение 1',
+        'Ctrl+Shift+O — Загрузить изображение 2',
+        'Ctrl+S — Сохранить PNG',
+        'Ctrl+Shift+S — Сохранить JPEG',
+        'Ctrl+Z — Отменить',
+        'Ctrl+Shift+Z / Ctrl+Y — Повторить',
+        'Space — Режим сравнения (или pan при зажатии)',
+        'R — Сброс',
+        'L — Живой предпросмотр',
+        'C — Свернуть/развернуть панель',
+        '↑/↓ — Переключить режим',
+        '? — Эта справка'
+    ].join('\n');
+    showStatus(text, 'info');
+}
+
+function setupKeyboardShortcuts() {
+    document.addEventListener('keydown', e => {
+        const tag = e.target.tagName;
+        const inInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+
+        /* Ctrl+O — загрузить изображение 1 */
+        if (e.ctrlKey && !e.shiftKey && e.key === 'o') {
+            e.preventDefault();
+            fileInput1.click();
+            return;
+        }
+
+        /* Ctrl+Shift+O — загрузить изображение 2 */
+        if (e.ctrlKey && e.shiftKey && e.key === 'O') {
+            e.preventDefault();
+            fileInput2.click();
+            return;
+        }
+
+        /* Ctrl+S — сохранить PNG */
+        if (e.ctrlKey && !e.shiftKey && e.key === 's') {
+            e.preventDefault();
+            downloadPngBtn.click();
+            return;
+        }
+
+        /* Ctrl+Shift+S — сохранить JPEG */
+        if (e.ctrlKey && e.shiftKey && e.key === 'S') {
+            e.preventDefault();
+            downloadJpgBtn.click();
+            return;
+        }
+
+        /* Ctrl+Z — отменить */
+        if (e.ctrlKey && !e.shiftKey && e.key === 'z') {
+            e.preventDefault();
+            undo();
+            return;
+        }
+
+        /* Ctrl+Shift+Z / Ctrl+Y — повторить */
+        if ((e.ctrlKey && e.shiftKey && e.key === 'Z') ||
+                (e.ctrlKey && !e.shiftKey && e.key === 'y')) {
+            e.preventDefault();
+            redo();
+            return;
+        }
+
+        if (inInput) return;
+
+        /* Space — предотвратить прокрутку страницы только в активном режиме */
+        if (e.code === 'Space' && spaceDown) {
+            e.preventDefault();
+        }
+
+        /* R — сброс */
+        if (e.key === 'r' && !e.ctrlKey) {
+            e.preventDefault();
+            resetBtn.click();
+            return;
+        }
+
+        /* L — живой предпросмотр */
+        if (e.key === 'l' && !e.ctrlKey) {
+            e.preventDefault();
+            const toggle = $('live-preview-toggle');
+            if (toggle) toggle.click();
+            return;
+        }
+
+        /* C — свернуть/развернуть панель */
+        if (e.key === 'c' && !e.ctrlKey) {
+            e.preventDefault();
+            const collapseBtn = $('panel-collapse-btn');
+            if (collapseBtn) collapseBtn.click();
+            return;
+        }
+
+        /* ↑/↓ — переключить режим */
+        if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            selectPreviousMode();
+            return;
+        }
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            selectNextMode();
+            return;
+        }
+
+        /* ? — справка */
+        if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+            e.preventDefault();
+            showKeyboardShortcuts();
+        }
+    });
+
+    /* Space keyup — режим сравнения (если не было движения) */
+    document.addEventListener('keyup', e => {
+        if (e.code === 'Space' && !isPanning
+                && e.target.tagName !== 'INPUT'
+                && e.target.tagName !== 'TEXTAREA'
+                && e.target.tagName !== 'SELECT') {
+            toggleComparisonMode();
+        }
+    });
+
+    /* Кнопка справки */
+    const helpBtn = document.createElement('button');
+    helpBtn.className   = 'help-btn';
+    helpBtn.type        = 'button';
+    helpBtn.textContent = '?';
+    helpBtn.title       = 'Горячие клавиши (?)';
+    helpBtn.addEventListener('click', showKeyboardShortcuts);
+    document.body.appendChild(helpBtn);
+}
+
+/* ══════════════════════════════════════════════════
    Инициализация
 ══════════════════════════════════════════════════ */
 
@@ -886,12 +1562,12 @@ function init() {
     scaleSlider1.addEventListener('input', () => {
         state.scale1 = parseInt(scaleSlider1.value, 10) / 100;
         scaleValue1.textContent = scaleSlider1.value + '%';
-        debouncedApply();
+        if (livePreviewEnabled) debouncedApply();
     });
     scaleSlider2.addEventListener('input', () => {
         state.scale2 = parseInt(scaleSlider2.value, 10) / 100;
         scaleValue2.textContent = scaleSlider2.value + '%';
-        debouncedApply();
+        if (livePreviewEnabled) debouncedApply();
     });
 
     /* Радио-кнопки ориентации */
@@ -961,6 +1637,63 @@ function init() {
     downloadPngBtn.addEventListener('click', () => downloadCanvas('image/png',  'png'));
     downloadJpgBtn.addEventListener('click', () => downloadCanvas('image/jpeg', 'jpg'));
     resetBtn.addEventListener('click', resetAll);
+
+    /* ── Живой предпросмотр ── */
+    const livePreviewToggle = $('live-preview-toggle');
+    if (livePreviewToggle) {
+        livePreviewToggle.checked = livePreviewEnabled;
+        livePreviewToggle.addEventListener('change', e => {
+            livePreviewEnabled = e.target.checked;
+            localStorage.setItem('livePreview', livePreviewEnabled);
+            applyBtn.style.display = livePreviewEnabled ? 'none' : '';
+        });
+        /* Скрыть кнопку «Применить» если live preview включён */
+        applyBtn.style.display = livePreviewEnabled ? 'none' : '';
+    }
+
+    /* ── История: кнопки Undo/Redo ── */
+    const undoBtn = $('undo-btn');
+    const redoBtn = $('redo-btn');
+    if (undoBtn) undoBtn.addEventListener('click', undo);
+    if (redoBtn) redoBtn.addEventListener('click', redo);
+    updateHistoryButtons();
+
+    /* ── Режим сравнения ── */
+    const comparisonToggleBtn = $('comparison-toggle-btn');
+    if (comparisonToggleBtn) {
+        comparisonToggleBtn.addEventListener('click', toggleComparisonMode);
+    }
+    const comparisonSlider = $('comparison-slider');
+    if (comparisonSlider) {
+        comparisonSlider.addEventListener('input', e => {
+            updateComparisonView(parseInt(e.target.value, 10));
+        });
+    }
+
+    /* ── Пресеты ── */
+    renderPresets();
+    const savePresetBtn = $('save-preset-btn');
+    if (savePresetBtn) savePresetBtn.addEventListener('click', savePreset);
+
+    /* ── Избранные режимы ── */
+    renderFavorites();
+    modeSelect.addEventListener('dblclick', e => {
+        if (e.target.tagName === 'OPTION') {
+            toggleFavoriteMode(e.target.value);
+        }
+    });
+
+    /* ── Поиск режимов ── */
+    setupModeSearch();
+
+    /* ── Ресайз панели ── */
+    setupPanelResize();
+
+    /* ── Zoom & Pan ── */
+    setupZoomPan();
+
+    /* ── Горячие клавиши ── */
+    setupKeyboardShortcuts();
 
     /* Начальная настройка */
     updateSliderVisibility();
