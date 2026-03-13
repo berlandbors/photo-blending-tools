@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Веб-инструмент для смешивания и слияния фотографий: Canvas попиксельное смешивание, CSS Blend Modes, коллаж, Split Screen, Double Exposure.">
+    <meta name="keywords" content="смешивание фотографий, photo blend, canvas blending, css blend modes, коллаж">
+    <meta name="author" content="Photo Blending Tools">
+    <meta property="og:title" content="Photo Blending Tools — инструмент слияния фотографий">
+    <meta property="og:description" content="Все виды смешивания фотографий в браузере">
+    <meta property="og:type" content="website">
+    <title>Photo Blending Tools 🎨</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     Шапка
+══════════════════════════════════════════ -->
+<header class="site-header" role="banner">
+    <span class="logo" aria-hidden="true">🎨</span>
+    <div>
+        <h1>Photo Blending Tools</h1>
+        <p class="tagline">Попиксельное смешивание · CSS Blend Modes · Коллаж · Split Screen · Double Exposure</p>
+    </div>
+</header>
+
+<!-- ══════════════════════════════════════════
+     Статусное сообщение
+══════════════════════════════════════════ -->
+<div role="status" aria-live="polite" id="status-message" class="status-message" hidden></div>
+
+<!-- ══════════════════════════════════════════
+     Основной контент
+══════════════════════════════════════════ -->
+<main class="app-container" role="main">
+
+    <!-- ── Левая колонка: загрузка ── -->
+    <aside class="upload-panel" aria-label="Загрузка изображений">
+
+        <p class="panel-title">Изображения</p>
+
+        <!-- Изображение 1 -->
+        <div>
+            <label for="drop-zone-1" class="visually-hidden">Зона загрузки изображения 1</label>
+            <div class="drop-zone"
+                 id="drop-zone-1"
+                 role="button"
+                 tabindex="0"
+                 aria-label="Загрузить первое изображение (нажмите или перетащите файл)">
+                <div class="drop-hint">
+                    <span class="icon" aria-hidden="true">📷</span>
+                    <span class="label">Изображение 1</span>
+                    <span class="sub">Перетащите или нажмите<br>JPG, PNG, GIF, WebP · макс. 10 МБ</span>
+                </div>
+                <img class="preview-img" id="preview-1" alt="Превью изображения 1" hidden>
+            </div>
+            <input type="file" id="file-input-1" accept="image/jpeg,image/png,image/gif,image/webp"
+                   class="visually-hidden" aria-label="Выберите первый файл">
+        </div>
+
+        <!-- Изображение 2 -->
+        <div>
+            <label for="drop-zone-2" class="visually-hidden">Зона загрузки изображения 2</label>
+            <div class="drop-zone"
+                 id="drop-zone-2"
+                 role="button"
+                 tabindex="0"
+                 aria-label="Загрузить второе изображение (нажмите или перетащите файл)">
+                <div class="drop-hint">
+                    <span class="icon" aria-hidden="true">🖼️</span>
+                    <span class="label">Изображение 2</span>
+                    <span class="sub">Перетащите или нажмите<br>JPG, PNG, GIF, WebP · макс. 10 МБ</span>
+                </div>
+                <img class="preview-img" id="preview-2" alt="Превью изображения 2" hidden>
+            </div>
+            <input type="file" id="file-input-2" accept="image/jpeg,image/png,image/gif,image/webp"
+                   class="visually-hidden" aria-label="Выберите второй файл">
+        </div>
+
+        <!-- ── Панель управления ── -->
+        <section class="control-panel" aria-label="Настройки смешивания">
+
+            <!-- Режим смешивания -->
+            <div class="control-group">
+                <label for="blend-mode">Режим смешивания</label>
+                <select id="blend-mode" aria-label="Выберите режим смешивания">
+
+                    <optgroup label="── Коллаж ──">
+                        <option value="collage-h">Горизонтальный коллаж</option>
+                        <option value="collage-v">Вертикальный коллаж</option>
+                        <option value="collage-grid2">Сетка 2×2</option>
+                        <option value="collage-grid3">Сетка 3×3</option>
+                    </optgroup>
+
+                    <optgroup label="── Прозрачность ──">
+                        <option value="opacity">Наложение с прозрачностью</option>
+                    </optgroup>
+
+                    <optgroup label="── CSS Blend Modes ──">
+                        <option value="normal">Normal</option>
+                        <option value="multiply">Multiply</option>
+                        <option value="screen">Screen</option>
+                        <option value="overlay">Overlay</option>
+                        <option value="darken">Darken</option>
+                        <option value="lighten">Lighten</option>
+                        <option value="color-dodge">Color Dodge</option>
+                        <option value="color-burn">Color Burn</option>
+                        <option value="hard-light">Hard Light</option>
+                        <option value="soft-light">Soft Light</option>
+                        <option value="difference">Difference</option>
+                        <option value="exclusion">Exclusion</option>
+                        <option value="hue">Hue</option>
+                        <option value="saturation">Saturation</option>
+                        <option value="color">Color</option>
+                        <option value="luminosity">Luminosity</option>
+                    </optgroup>
+
+                    <optgroup label="── Canvas Blending (попиксельно) ──">
+                        <option value="average">Average (усреднение)</option>
+                        <option value="additive">Additive (сложение)</option>
+                        <option value="multiply-canvas">Multiply (умножение)</option>
+                        <option value="screen-canvas">Screen (осветление)</option>
+                        <option value="overlay-canvas">Overlay (наложение)</option>
+                        <option value="difference-canvas">Difference (разница)</option>
+                        <option value="lighten-only">Lighten Only</option>
+                        <option value="darken-only">Darken Only</option>
+                        <option value="luminosity-blend">Luminosity Blend</option>
+                        <option value="gradient-h">Gradient Mask (горизонт.)</option>
+                        <option value="gradient-v">Gradient Mask (вертикал.)</option>
+                        <option value="gradient-radial">Gradient Mask (радиальн.)</option>
+                        <option value="chroma-key">Chroma Key (Green Screen)</option>
+                    </optgroup>
+
+                    <optgroup label="── Художественные ──">
+                        <option value="double-exposure">Double Exposure</option>
+                        <option value="split-v">Split Screen (вертикал.)</option>
+                        <option value="split-h">Split Screen (горизонт.)</option>
+                    </optgroup>
+
+                </select>
+            </div>
+
+            <hr class="divider">
+
+            <!-- Слайдер прозрачности -->
+            <div class="slider-row" id="opacity-row">
+                <div class="slider-label">
+                    <span>Прозрачность</span>
+                    <span class="slider-value" id="opacity-value">50%</span>
+                </div>
+                <input type="range" id="opacity-slider" min="0" max="100" value="50"
+                       aria-label="Прозрачность наложения" aria-valuemin="0" aria-valuemax="100">
+            </div>
+
+            <!-- Blend Amount -->
+            <div class="slider-row" id="blend-amount-row" hidden>
+                <div class="slider-label">
+                    <span>Интенсивность</span>
+                    <span class="slider-value" id="blend-amount-value">100%</span>
+                </div>
+                <input type="range" id="blend-amount-slider" min="0" max="100" value="100"
+                       aria-label="Интенсивность смешивания" aria-valuemin="0" aria-valuemax="100">
+            </div>
+
+            <hr class="divider">
+
+            <!-- Яркость -->
+            <div class="slider-row">
+                <div class="slider-label">
+                    <span>Яркость</span>
+                    <span class="slider-value" id="brightness-value">0</span>
+                </div>
+                <input type="range" id="brightness-slider" min="-100" max="100" value="0"
+                       aria-label="Яркость" aria-valuemin="-100" aria-valuemax="100">
+            </div>
+
+            <!-- Контраст -->
+            <div class="slider-row">
+                <div class="slider-label">
+                    <span>Контраст</span>
+                    <span class="slider-value" id="contrast-value">100%</span>
+                </div>
+                <input type="range" id="contrast-slider" min="0" max="200" value="100"
+                       aria-label="Контраст" aria-valuemin="0" aria-valuemax="200">
+            </div>
+
+            <hr class="divider">
+
+            <!-- Кнопки -->
+            <div class="actions">
+                <button class="btn btn-primary" id="apply-btn" type="button"
+                        aria-label="Применить выбранный режим смешивания">
+                    ✨ Применить
+                </button>
+                <div class="btn-group">
+                    <button class="btn btn-success" id="download-png" type="button"
+                            aria-label="Скачать результат в формате PNG">
+                        ⬇ PNG
+                    </button>
+                    <button class="btn btn-warning" id="download-jpg" type="button"
+                            aria-label="Скачать результат в формате JPEG">
+                        ⬇ JPEG
+                    </button>
+                </div>
+                <button class="btn btn-danger" id="reset-btn" type="button"
+                        aria-label="Сбросить все изображения и настройки">
+                    🔄 Сбросить
+                </button>
+            </div>
+
+        </section>
+    </aside>
+
+    <!-- ── Правая колонка: результат ── -->
+    <section class="result-panel" aria-label="Результат смешивания">
+        <p class="panel-title">Результат</p>
+        <div class="canvas-wrapper">
+            <canvas id="result-canvas"
+                    aria-label="Холст с результатом смешивания"
+                    role="img">
+                Ваш браузер не поддерживает HTML Canvas.
+            </canvas>
+            <div id="loading-overlay" hidden aria-label="Обработка..." role="status">
+                <div class="spinner" aria-hidden="true"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── Интерактивный разделитель Split Screen ── -->
+    <div id="split-handle" role="separator" aria-label="Разделитель Split Screen (перетащите)"></div>
+
+    <!-- ── Справочник режимов ── -->
+    <section class="modes-info" aria-label="Описание режимов смешивания">
+        <h2>Режимы смешивания</h2>
+        <div class="modes-grid" role="list">
+
+            <article class="mode-card" role="listitem">
+                <div class="mode-icon" aria-hidden="true">🖼️</div>
+                <div class="mode-name">Коллаж</div>
+                <div class="mode-desc">Горизонтальный, вертикальный и сеточный (2×2, 3×3) коллаж из двух фотографий.</div>
+            </article>
+
+            <article class="mode-card" role="listitem">
+                <div class="mode-icon" aria-hidden="true">🌫️</div>
+                <div class="mode-name">Прозрачность</div>
+                <div class="mode-desc">Наложение с регулируемой прозрачностью от 0 до 100%.</div>
+            </article>
+
+            <article class="mode-card" role="listitem">
+                <div class="mode-icon" aria-hidden="true">🎨</div>
+                <div class="mode-name">CSS Blend Modes</div>
+                <div class="mode-desc">Все 16 стандартных режимов: Multiply, Screen, Overlay, Difference и другие.</div>
+            </article>
+
+            <article class="mode-card" role="listitem">
+                <div class="mode-icon" aria-hidden="true">⚡</div>
+                <div class="mode-name">Average / Additive</div>
+                <div class="mode-desc">Усреднение или сложение значений каждого пикселя попиксельно.</div>
+            </article>
+
+            <article class="mode-card" role="listitem">
+                <div class="mode-icon" aria-hidden="true">🌈</div>
+                <div class="mode-name">Gradient Masks</div>
+                <div class="mode-desc">Плавный переход между изображениями по горизонтали, вертикали или от центра.</div>
+            </article>
+
+            <article class="mode-card" role="listitem">
+                <div class="mode-icon" aria-hidden="true">💡</div>
+                <div class="mode-name">Luminosity / Lighten / Darken</div>
+                <div class="mode-desc">Смешивание по яркости или выбор более светлого / тёмного пикселя.</div>
+            </article>
+
+            <article class="mode-card" role="listitem">
+                <div class="mode-icon" aria-hidden="true">💚</div>
+                <div class="mode-name">Chroma Key</div>
+                <div class="mode-desc">Удаление зелёного фона (green screen) и замена его вторым изображением.</div>
+            </article>
+
+            <article class="mode-card" role="listitem">
+                <div class="mode-icon" aria-hidden="true">✨</div>
+                <div class="mode-name">Double Exposure</div>
+                <div class="mode-desc">Художественное двойное экспонирование с усилением контраста первого слоя.</div>
+            </article>
+
+            <article class="mode-card" role="listitem">
+                <div class="mode-icon" aria-hidden="true">↔️</div>
+                <div class="mode-name">Split Screen</div>
+                <div class="mode-desc">Разделение холста по вертикали или горизонтали с перетаскиваемым разделителем.</div>
+            </article>
+
+        </div>
+    </section>
+
+</main>
+
+<!-- ══════════════════════════════════════════
+     Подвал
+══════════════════════════════════════════ -->
+<footer class="site-footer" role="contentinfo">
+    <p>
+        Photo Blending Tools &mdash; открытый проект &mdash;
+        <a href="https://github.com/berlandbors/photo-blending-tools" target="_blank" rel="noopener noreferrer">
+            GitHub
+        </a>
+        &mdash; лицензия MIT
+    </p>
+</footer>
+
+<!-- Скрипты -->
+<script src="blending.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
