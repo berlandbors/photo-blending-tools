@@ -16,6 +16,9 @@
 | **Canvas Blending** | Попиксельные алгоритмы (см. ниже) |
 | **Double Exposure** | Художественное двойное экспонирование |
 | **Split Screen** | Вертикальный / горизонтальный разделитель |
+| **Масштабирование** | Независимое изменение размера каждой фотографии (10%–200%) |
+| **Ориентация** | Автоопределение и ручной выбор альбомной/книжной ориентации |
+| **Улучшенные слайдеры** | Точный контроль без случайных перескоков |
 
 ### Canvas Blending — алгоритмы
 
@@ -44,8 +47,12 @@
    Поддерживаемые форматы: **JPG, PNG, GIF, WebP** — до **10 МБ** каждый.
 3. Выберите **режим смешивания** из выпадающего списка.
 4. Настройте параметры с помощью **слайдеров** (прозрачность, яркость, контраст, интенсивность).
-5. Нажмите **✨ Применить**.
-6. Скачайте результат в **PNG** или **JPEG**.
+5. **Настройте изображения** (опционально):
+   - **Масштаб** — измените размер каждой фотографии от 10% до 200%
+   - **Ориентация** — поверните изображение для альбомной или книжной компоновки
+   - Размеры и ориентация изображения отображаются под зоной загрузки
+6. Нажмите **✨ Применить**.
+7. Скачайте результат в **PNG** или **JPEG**.
 
 ---
 
@@ -105,12 +112,16 @@ A fully-featured browser-based photo blending tool — no installation required.
 - **Double Exposure** — artistic double exposure effect
 - **Split Screen** — draggable vertical / horizontal divider
 - **Post-processing** — brightness & contrast adjustment
+- **Scaling** — independent resize of each photo (10%–200%)
+- **Orientation** — auto-detection and manual selection of landscape/portrait
+- **Improved sliders** — no accidental jumps when clicking on the track
 
 ### Usage
 1. Open `index.html` in a modern browser.
 2. Upload two images (drag & drop or click).
 3. Choose a blend mode and adjust sliders.
-4. Click **Apply** and download as PNG or JPEG.
+4. Optionally adjust **scale** (10–200%) and **orientation** (Auto / Landscape / Portrait) per image.
+5. Click **Apply** and download as PNG or JPEG.
 
 ### License
 MIT

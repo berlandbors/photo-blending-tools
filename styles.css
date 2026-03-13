@@ -267,26 +267,49 @@ option {
 input[type="range"] {
     -webkit-appearance: none;
     appearance: none;
-    width:       100%;
-    height:      4px;
-    background:  var(--color-border);
-    border-radius: 9999px;
-    cursor:      pointer;
-    accent-color: var(--color-accent);
+    width:          100%;
+    height:         4px;
+    background:     var(--color-border);
+    border-radius:  9999px;
+    accent-color:   var(--color-accent);
+    /* Disable clicks on the track; only the thumb should be interactive */
+    pointer-events: none;
 }
 
 input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width:         16px;
-    height:        16px;
-    border-radius: 50%;
-    background:    var(--color-accent);
-    box-shadow:    0 0 0 3px rgba(88, 166, 255, 0.25);
-    transition:    box-shadow var(--transition);
+    width:          16px;
+    height:         16px;
+    border-radius:  50%;
+    background:     var(--color-accent);
+    box-shadow:     0 0 0 3px rgba(88, 166, 255, 0.25);
+    transition:     box-shadow var(--transition);
+    pointer-events: auto;
+    cursor:         grab;
+}
+
+input[type="range"]::-webkit-slider-thumb:active {
+    cursor: grabbing;
 }
 
 input[type="range"]::-webkit-slider-thumb:hover {
     box-shadow: 0 0 0 5px rgba(88, 166, 255, 0.35);
+}
+
+input[type="range"]::-moz-range-thumb {
+    width:          16px;
+    height:         16px;
+    border:         none;
+    border-radius:  50%;
+    background:     var(--color-accent);
+    box-shadow:     0 0 0 3px rgba(88, 166, 255, 0.25);
+    transition:     box-shadow var(--transition);
+    pointer-events: auto;
+    cursor:         grab;
+}
+
+input[type="range"]::-moz-range-thumb:active {
+    cursor: grabbing;
 }
 
 input[type="range"]:focus {
@@ -294,6 +317,10 @@ input[type="range"]:focus {
 }
 
 input[type="range"]:focus::-webkit-slider-thumb {
+    box-shadow: 0 0 0 5px rgba(88, 166, 255, 0.45);
+}
+
+input[type="range"]:focus::-moz-range-thumb {
     box-shadow: 0 0 0 5px rgba(88, 166, 255, 0.45);
 }
 
@@ -498,6 +525,70 @@ input[type="range"]:focus::-webkit-slider-thumb {
 .site-footer a { color: var(--color-accent); }
 
 /* ══════════════════════════════════════════════════════
+   Масштаб и ориентация изображений
+══════════════════════════════════════════════════════ */
+.scale-control {
+    margin-top: 8px;
+}
+
+.scale-control label {
+    display:         flex;
+    justify-content: space-between;
+    align-items:     center;
+    font-size:       0.82rem;
+    font-weight:     500;
+    color:           var(--color-text-muted);
+    margin-bottom:   5px;
+}
+
+.scale-control label span {
+    font-weight: 700;
+    color:       var(--color-accent);
+}
+
+.orientation-control {
+    margin-top: 8px;
+}
+
+.orientation-label {
+    display:     block;
+    font-size:   0.82rem;
+    font-weight: 500;
+    color:       var(--color-text-muted);
+    margin-bottom: 6px;
+}
+
+.radio-group {
+    display:   flex;
+    gap:       10px;
+    flex-wrap: wrap;
+}
+
+.radio-group label {
+    display:     flex;
+    align-items: center;
+    gap:         4px;
+    font-size:   0.82rem;
+    color:       var(--color-text);
+    cursor:      pointer;
+    white-space: nowrap;
+    min-height:  28px;
+}
+
+.radio-group input[type="radio"] {
+    accent-color: var(--color-accent);
+    cursor:       pointer;
+}
+
+.image-info {
+    font-size:   0.78rem;
+    color:       var(--color-text-muted);
+    margin-top:  4px;
+    min-height:  1.2em;
+    font-style:  italic;
+}
+
+/* ══════════════════════════════════════════════════════
    Responsive
 ══════════════════════════════════════════════════════ */
 @media (max-width: 960px) {
@@ -518,6 +609,16 @@ input[type="range"]:focus::-webkit-slider-thumb {
     .control-panel { padding: 16px; }
     .btn-group { grid-template-columns: 1fr; }
     .modes-grid { grid-template-columns: 1fr 1fr; }
+    .radio-group {
+        flex-direction: column;
+        gap:            6px;
+    }
+    .radio-group label {
+        min-height: 44px;
+    }
+    .scale-control input[type="range"] {
+        width: 100%;
+    }
 }
 
 /* ══════════════════════════════════════════════════════

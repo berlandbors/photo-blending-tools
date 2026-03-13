@@ -60,6 +60,25 @@
             </div>
             <input type="file" id="file-input-1" accept="image/jpeg,image/png,image/gif,image/webp"
                    class="visually-hidden" aria-label="Выберите первый файл">
+            <div class="scale-control">
+                <label for="scale-slider-1">🔍 Масштаб 1: <span id="scale-value-1">100%</span></label>
+                <input type="range" id="scale-slider-1" min="10" max="200" value="100" step="5"
+                       aria-label="Масштаб первого изображения"
+                       title="Изменить размер изображения от 10% до 200%">
+            </div>
+            <div class="orientation-control">
+                <span class="orientation-label">Ориентация 1:</span>
+                <div class="radio-group">
+                    <label><input type="radio" name="orientation-1" value="auto" checked> Авто</label>
+                    <label title="Повернуть изображение для альбомной ориентации">
+                        <input type="radio" name="orientation-1" value="landscape"> 📐 Альбомная
+                    </label>
+                    <label title="Повернуть изображение для книжной ориентации">
+                        <input type="radio" name="orientation-1" value="portrait"> 📱 Книжная
+                    </label>
+                </div>
+            </div>
+            <div class="image-info" id="image-info-1" aria-live="polite"></div>
         </div>
 
         <!-- Изображение 2 -->
@@ -79,6 +98,25 @@
             </div>
             <input type="file" id="file-input-2" accept="image/jpeg,image/png,image/gif,image/webp"
                    class="visually-hidden" aria-label="Выберите второй файл">
+            <div class="scale-control">
+                <label for="scale-slider-2">🔍 Масштаб 2: <span id="scale-value-2">100%</span></label>
+                <input type="range" id="scale-slider-2" min="10" max="200" value="100" step="5"
+                       aria-label="Масштаб второго изображения"
+                       title="Изменить размер изображения от 10% до 200%">
+            </div>
+            <div class="orientation-control">
+                <span class="orientation-label">Ориентация 2:</span>
+                <div class="radio-group">
+                    <label><input type="radio" name="orientation-2" value="auto" checked> Авто</label>
+                    <label title="Повернуть изображение для альбомной ориентации">
+                        <input type="radio" name="orientation-2" value="landscape"> 📐 Альбомная
+                    </label>
+                    <label title="Повернуть изображение для книжной ориентации">
+                        <input type="radio" name="orientation-2" value="portrait"> 📱 Книжная
+                    </label>
+                </div>
+            </div>
+            <div class="image-info" id="image-info-2" aria-live="polite"></div>
         </div>
 
         <!-- ── Панель управления ── -->
