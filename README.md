@@ -23,6 +23,37 @@
 | **Кнопки загрузки** | Явные кнопки для выбора файлов в дополнение к drag & drop |
 | **Управление слоями** | Выбор порядка наложения изображений (какое сверху/снизу) |
 
+### 🚀 Новые возможности
+
+- **Ресайзабельная панель** — изменяйте ширину боковой панели, сворачивайте её (состояние сохраняется)
+- **Живой предпросмотр** — автоматическое применение изменений в реальном времени (переключатель ⚡)
+- **Горячие клавиши** — быстрый доступ ко всем функциям (нажмите `?` для справки)
+- **История (Undo/Redo)** — отмена и повтор до 20 шагов (Ctrl+Z / Ctrl+Shift+Z)
+- **Режим сравнения** — визуальное сравнение «до/после» с ползунком (Space)
+- **Пресеты** — сохраняйте и применяйте любимые комбинации настроек
+- **Zoom & Pan** — масштабирование колесиком мыши и перемещение (Space + drag)
+- **Поиск режимов** — быстрый фильтр по названию режима смешивания
+- **Избранные режимы** — отмечайте часто используемые режимы (двойной клик)
+- **Анимации** — плавные переходы и микроинтеракции
+
+### ⌨️ Горячие клавиши
+
+| Клавиша | Действие |
+|---------|----------|
+| `Ctrl+O` | Загрузить изображение 1 |
+| `Ctrl+Shift+O` | Загрузить изображение 2 |
+| `Ctrl+S` | Сохранить PNG |
+| `Ctrl+Shift+S` | Сохранить JPEG |
+| `Ctrl+Z` | Отменить |
+| `Ctrl+Shift+Z` / `Ctrl+Y` | Повторить |
+| `Space` (hold + drag) | Перемещение (pan) |
+| `Space` (tap) | Режим сравнения До/После |
+| `R` | Сброс настроек |
+| `L` | Живой предпросмотр вкл/выкл |
+| `C` | Свернуть/развернуть панель |
+| `↑` / `↓` | Переключить режим смешивания |
+| `?` | Показать справку |
+
 ### Canvas Blending — алгоритмы
 
 | Режим | Формула |
@@ -117,17 +148,22 @@ A fully-featured browser-based photo blending tool — no installation required.
 - **Post-processing** — brightness & contrast adjustment
 - **Scaling** — independent resize of each photo (10%–200%)
 - **Orientation** — auto-detection and manual selection of landscape/portrait
-- **Improved sliders** — no accidental jumps when clicking on the track
-- **Scrollable sidebar** — smooth scrolling when the panel overflows
-- **Upload buttons** — explicit file-picker buttons alongside drag & drop
-- **Layer order** — choose which image is on top/bottom during blending
+- **Resizable panel** — drag to resize or collapse the sidebar
+- **Live Preview** — auto-apply changes in real-time (⚡ toggle)
+- **Keyboard Shortcuts** — quick access to all features (press `?` for help)
+- **Undo/Redo** — history of up to 20 steps (Ctrl+Z / Ctrl+Shift+Z)
+- **Comparison Mode** — before/after split slider (Space)
+- **Presets** — save and recall favourite setting combinations
+- **Zoom & Pan** — mouse-wheel zoom and Space+drag pan
+- **Mode Search** — filter blend modes by name
+- **Favourite Modes** — double-click an option to star it
 
 ### Usage
 1. Open `index.html` in a modern browser.
 2. Upload two images (drag & drop or click).
 3. Choose a blend mode and adjust sliders.
 4. Optionally adjust **scale** (10–200%) and **orientation** (Auto / Landscape / Portrait) per image.
-5. Click **Apply** and download as PNG or JPEG.
+5. Click **Apply** (or enable Live Preview for instant updates) and download as PNG or JPEG.
 
 ### License
 MIT

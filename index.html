@@ -38,6 +38,14 @@
 ══════════════════════════════════════════ -->
 <main class="app-container" role="main">
 
+    <!-- ── Разделитель для ресайза панели ── -->
+    <div class="panel-resizer" id="panel-resizer" role="separator" aria-label="Изменить размер панели"></div>
+
+    <!-- ── Кнопка коллапса панели ── -->
+    <button class="panel-collapse-btn" id="panel-collapse-btn" aria-label="Свернуть/развернуть панель">
+        <span class="icon">◀</span>
+    </button>
+
     <!-- ── Левая колонка: загрузка ── -->
     <aside class="upload-panel" aria-label="Загрузка изображений">
 
@@ -133,6 +141,13 @@
             <!-- Режим смешивания -->
             <div class="control-group">
                 <label for="blend-mode">Режим смешивания</label>
+                <div class="mode-search-container">
+                    <input type="text"
+                           class="mode-search-input"
+                           id="mode-search"
+                           placeholder="🔍 Поиск режима..."
+                           autocomplete="off">
+                </div>
                 <select id="blend-mode" aria-label="Выберите режим смешивания">
 
                     <optgroup label="── Коллаж ──">
@@ -261,6 +276,25 @@
 
             <hr class="divider">
 
+            <!-- Живой предпросмотр -->
+            <div class="live-preview-control">
+                <label class="toggle-switch">
+                    <input type="checkbox" id="live-preview-toggle" checked>
+                    <span class="toggle-slider"></span>
+                    <span class="toggle-label">⚡ Живой предпросмотр</span>
+                </label>
+            </div>
+
+            <!-- История -->
+            <div class="history-controls">
+                <button id="undo-btn" class="icon-btn" type="button" title="Отменить (Ctrl+Z)" disabled>
+                    ↶ Отменить
+                </button>
+                <button id="redo-btn" class="icon-btn" type="button" title="Повторить (Ctrl+Shift+Z)" disabled>
+                    ↷ Повторить
+                </button>
+            </div>
+
             <!-- Кнопки -->
             <div class="actions">
                 <button class="btn btn-primary" id="apply-btn" type="button"
@@ -284,6 +318,16 @@
             </div>
 
         </section>
+
+        <!-- ── Пресеты ── -->
+        <section class="presets-section" aria-label="Пресеты настроек">
+            <p class="panel-title">Пресеты</p>
+            <div class="presets-list" id="presets-list"></div>
+            <button class="btn save-preset-btn" id="save-preset-btn" type="button">
+                💾 Сохранить пресет
+            </button>
+        </section>
+
     </aside>
 
     <!-- ── Правая колонка: результат ── -->
@@ -298,7 +342,16 @@
             <div id="loading-overlay" hidden aria-label="Обработка..." role="status">
                 <div class="spinner" aria-hidden="true"></div>
             </div>
+            <!-- Режим сравнения -->
+            <div class="comparison-overlay" id="comparison-overlay" hidden>
+                <input type="range" class="comparison-slider" id="comparison-slider"
+                       min="0" max="100" value="50" aria-label="Разделитель сравнения">
+                <div class="comparison-divider" id="comparison-divider"></div>
+            </div>
         </div>
+        <button class="comparison-toggle-btn" id="comparison-toggle-btn" type="button">
+            👁️ Сравнение (Space)
+        </button>
     </section>
 
     <!-- ── Интерактивный разделитель Split Screen ── -->
