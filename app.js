@@ -30,10 +30,11 @@ const state = {
     splitPos: 50,          // позиция разделителя (0–100)
     isDraggingSplit: false,
     layerOrder: 'img1-top', // 'img1-top' | 'img2-top' | 'auto'
-    scale1: 1.0,           // масштаб первого изображения (1.0 = 100%)
-    scale2: 1.0,           // масштаб второго изображения
     orientation1: 'auto',  // 'auto' | 'landscape' | 'portrait'
     orientation2: 'auto',
+    activeLayer: 1,        // активный слой: 1 или 2
+    layer1: { opacity: 100, scale: 100, x: 0, y: 0, brightness: 0, contrast: 0 },
+    layer2: { opacity: 100, scale: 100, x: 0, y: 0, brightness: 0, contrast: 0 },
 };
 
 /* ══════════════════════════════════════════════════
@@ -59,12 +60,23 @@ const brightnessValue   = $('brightness-value');
 const contrastValue     = $('contrast-value');
 const blendAmountValue  = $('blend-amount-value');
 
-const scaleSlider1  = $('scale-slider-1');
-const scaleSlider2  = $('scale-slider-2');
-const scaleValue1   = $('scale-value-1');
-const scaleValue2   = $('scale-value-2');
 const imageInfo1    = $('image-info-1');
 const imageInfo2    = $('image-info-2');
+
+/* ── Per-layer controls ── */
+const layer1OpacitySlider     = $('layer1-opacity');
+const layer1ScaleSlider       = $('layer1-scale');
+const layer1XSlider           = $('layer1-x');
+const layer1YSlider           = $('layer1-y');
+const layer1BrightnessSlider  = $('layer1-brightness');
+const layer1ContrastSlider    = $('layer1-contrast');
+
+const layer2OpacitySlider     = $('layer2-opacity');
+const layer2ScaleSlider       = $('layer2-scale');
+const layer2XSlider           = $('layer2-x');
+const layer2YSlider           = $('layer2-y');
+const layer2BrightnessSlider  = $('layer2-brightness');
+const layer2ContrastSlider    = $('layer2-contrast');
 
 const applyBtn       = $('apply-btn');
 const downloadPngBtn = $('download-png');
@@ -269,7 +281,8 @@ function rotateImage(img, targetOrientation) {
 function getScaledSource(slot) {
     const img         = slot === 1 ? state.image1       : state.image2;
     const orientation = slot === 1 ? state.orientation1 : state.orientation2;
-    const scale       = slot === 1 ? state.scale1       : state.scale2;
+    const layer       = slot === 1 ? state.layer1       : state.layer2;
+    const scale       = layer.scale / 100;
 
     if (!img) return null;
 
@@ -292,6 +305,50 @@ function getScaledSource(slot) {
     canvas.height = scaledH;
     canvas.getContext('2d').drawImage(oriented, 0, 0, scaledW, scaledH);
     return { src: canvas, width: scaledW, height: scaledH };
+}
+
+/**
+ * Получить полностью обработанный источник слоя:
+ * ориентация + масштаб + яркость/контраст (per-layer).
+ * Возвращает также x, y смещение и opacity для использования при рендеринге.
+ * @param {number} slot — 1 или 2
+ * @returns {{ src: HTMLCanvasElement, width: number, height: number, x: number, y: number, opacity: number }|null}
+ */
+function getProcessedLayer(slot) {
+    const img         = slot === 1 ? state.image1       : state.image2;
+    const orientation = slot === 1 ? state.orientation1 : state.orientation2;
+    const layer       = slot === 1 ? state.layer1       : state.layer2;
+
+    if (!img) return null;
+
+    const oriented = rotateImage(img, orientation);
+    const srcW = oriented.naturalWidth  || oriented.width;
+    const srcH = oriented.naturalHeight || oriented.height;
+    const scale = layer.scale / 100;
+    const scaledW = Math.max(10, Math.round(srcW * scale));
+    const scaledH = Math.max(10, Math.round(srcH * scale));
+
+    const canvas = document.createElement('canvas');
+    canvas.width  = scaledW;
+    canvas.height = scaledH;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(oriented, 0, 0, scaledW, scaledH);
+
+    /* Применить per-layer яркость/контраст */
+    if (layer.brightness !== 0 || layer.contrast !== 0) {
+        /* contrast: per-layer диапазон -100..100 → преобразуем в 0..200 (100 = без изменений) */
+        const contrastAdj = 100 + layer.contrast;
+        window.BlendingEngine.applyBrightnessContrast(canvas, layer.brightness, contrastAdj);
+    }
+
+    return {
+        src:     canvas,
+        width:   scaledW,
+        height:  scaledH,
+        x:       layer.x,
+        y:       layer.y,
+        opacity: layer.opacity / 100,
+    };
 }
 
 /**
@@ -328,8 +385,8 @@ function updateImageInfo(slot) {
  * @returns {{ bottom: object|null, top: object|null }}
  */
 function getOrderedSources() {
-    const s1 = getScaledSource(1);
-    const s2 = getScaledSource(2);
+    const s1 = getProcessedLayer(1);
+    const s2 = getProcessedLayer(2);
     if (state.layerOrder === 'img2-top') {
         return { bottom: s1, top: s2 };
     }
@@ -342,6 +399,21 @@ function getOrderedSources() {
 ══════════════════════════════════════════════════ */
 
 /**
+ * Обновить визуальные индикаторы активного слоя
+ * @param {number} slot — 1 или 2
+ */
+function setActiveLayer(slot) {
+    state.activeLayer = slot;
+    dropZone1.classList.toggle('active', slot === 1);
+    dropZone2.classList.toggle('active', slot === 2);
+
+    const controls1 = $('layer-controls-1');
+    const controls2 = $('layer-controls-2');
+    if (controls1) controls1.classList.toggle('inactive', slot !== 1);
+    if (controls2) controls2.classList.toggle('inactive', slot !== 2);
+}
+
+/**
  * Настроить зону перетаскивания и превью для одного изображения
  * @param {HTMLElement} zone
  * @param {HTMLInputElement} input
@@ -349,14 +421,14 @@ function getOrderedSources() {
  * @param {number} slot  — 1 или 2
  */
 function setupDropZone(zone, input, preview, slot) {
-    /* Клик по зоне */
-    zone.addEventListener('click', () => input.click());
+    /* Клик по зоне — выбрать слой (не открывать диалог файла) */
+    zone.addEventListener('click', () => setActiveLayer(slot));
 
     /* Keyboard accessibility */
     zone.addEventListener('keydown', e => {
         if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
-            input.click();
+            setActiveLayer(slot);
         }
     });
 
@@ -401,6 +473,7 @@ async function handleFile(file, slot) {
             $('drop-zone-2').querySelector('.drop-hint').hidden = true;
             updateImageInfo(2);
         }
+        setActiveLayer(slot);
         showStatus(`Изображение ${slot} загружено (${img.naturalWidth}×${img.naturalHeight} px)`, 'success');
         if (livePreviewEnabled) debouncedApply();
     } catch (err) {
@@ -514,8 +587,8 @@ const debouncedApply = debounce(apply, DEBOUNCE_DELAY_MS);
 ══════════════════════════════════════════════════ */
 
 function renderCollage(mode) {
-    const s1 = getScaledSource(1);
-    const s2 = getScaledSource(2);
+    const s1 = getProcessedLayer(1);
+    const s2 = getProcessedLayer(2);
     const sources = [s1, s2].filter(Boolean);
     if (sources.length === 0) return;
 
@@ -581,8 +654,8 @@ function renderCollage(mode) {
 ══════════════════════════════════════════════════ */
 
 function renderOpacity() {
-    const s1 = getScaledSource(1);
-    const s2 = getScaledSource(2);
+    const s1 = getProcessedLayer(1);
+    const s2 = getProcessedLayer(2);
     if (!s1 || !s2) {
         showStatus('Для этого режима нужны оба изображения.', 'info');
         return;
@@ -594,11 +667,13 @@ function renderOpacity() {
     resultCanvas.width  = W;
     resultCanvas.height = H;
 
-    resultCtx.drawImage(bottom.src, 0, 0, bottom.width, bottom.height);
+    resultCtx.globalAlpha = bottom.opacity;
+    resultCtx.drawImage(bottom.src, bottom.x, bottom.y, bottom.width, bottom.height);
+    resultCtx.globalAlpha = 1;
 
-    const alpha = parseInt(opacitySlider.value, 10) / 100;
+    const alpha = (parseInt(opacitySlider.value, 10) / 100) * top.opacity;
     resultCtx.globalAlpha = alpha;
-    resultCtx.drawImage(top.src, 0, 0, top.width, top.height);
+    resultCtx.drawImage(top.src, top.x, top.y, top.width, top.height);
     resultCtx.globalAlpha = 1;
 }
 
@@ -607,8 +682,8 @@ function renderOpacity() {
 ══════════════════════════════════════════════════ */
 
 function renderCSSBlend(mode) {
-    const s1 = getScaledSource(1);
-    const s2 = getScaledSource(2);
+    const s1 = getProcessedLayer(1);
+    const s2 = getProcessedLayer(2);
     if (!s1 || !s2) {
         showStatus('Для этого режима нужны оба изображения.', 'info');
         return;
@@ -620,10 +695,14 @@ function renderCSSBlend(mode) {
     resultCanvas.width  = W;
     resultCanvas.height = H;
 
-    resultCtx.drawImage(bottom.src, 0, 0, bottom.width, bottom.height);
+    resultCtx.globalAlpha = bottom.opacity;
+    resultCtx.drawImage(bottom.src, bottom.x, bottom.y, bottom.width, bottom.height);
+    resultCtx.globalAlpha = 1;
     resultCtx.globalCompositeOperation = mode;
-    resultCtx.drawImage(top.src, 0, 0, top.width, top.height);
+    resultCtx.globalAlpha = top.opacity;
+    resultCtx.drawImage(top.src, top.x, top.y, top.width, top.height);
     resultCtx.globalCompositeOperation = 'source-over';
+    resultCtx.globalAlpha = 1;
 }
 
 /* ══════════════════════════════════════════════════
@@ -631,8 +710,8 @@ function renderCSSBlend(mode) {
 ══════════════════════════════════════════════════ */
 
 function renderCanvasBlend(mode) {
-    const s1 = getScaledSource(1);
-    const s2 = getScaledSource(2);
+    const s1 = getProcessedLayer(1);
+    const s2 = getProcessedLayer(2);
     if (!s1 || !s2) {
         showStatus('Для этого режима нужны оба изображения.', 'info');
         return;
@@ -652,9 +731,24 @@ function renderCanvasBlend(mode) {
         threshold:   80,
     };
 
-    /* Применяем порядок слоев: blendImages(bottom, top, ...) */
+    /* Создаём полноразмерные canvas-источники с учётом позиции и прозрачности */
+    const W = Math.max(s1.width, s2.width);
+    const H = Math.max(s1.height, s2.height);
     const { bottom, top } = getOrderedSources();
-    const out = window.BlendingEngine.blendImages(bottom.src, top.src, internalMode, opts);
+
+    const bottomCanvas = document.createElement('canvas');
+    bottomCanvas.width = W; bottomCanvas.height = H;
+    const bCtx = bottomCanvas.getContext('2d');
+    bCtx.globalAlpha = bottom.opacity;
+    bCtx.drawImage(bottom.src, bottom.x, bottom.y, bottom.width, bottom.height);
+
+    const topCanvas = document.createElement('canvas');
+    topCanvas.width = W; topCanvas.height = H;
+    const tCtx = topCanvas.getContext('2d');
+    tCtx.globalAlpha = top.opacity;
+    tCtx.drawImage(top.src, top.x, top.y, top.width, top.height);
+
+    const out = window.BlendingEngine.blendImages(bottomCanvas, topCanvas, internalMode, opts);
     resultCanvas.width  = out.width;
     resultCanvas.height = out.height;
     resultCtx.drawImage(out, 0, 0);
@@ -665,15 +759,32 @@ function renderCanvasBlend(mode) {
 ══════════════════════════════════════════════════ */
 
 function renderDoubleExposure() {
-    const s1 = getScaledSource(1);
-    const s2 = getScaledSource(2);
+    const s1 = getProcessedLayer(1);
+    const s2 = getProcessedLayer(2);
     if (!s1 || !s2) {
         showStatus('Для двойного экспонирования нужны оба изображения.', 'info');
         return;
     }
     const opts = { blendAmount: parseInt(blendAmountSlider.value, 10) };
     const { bottom, top } = getOrderedSources();
-    const out  = window.BlendingEngine.doubleExposure(bottom.src, top.src, opts);
+
+    /* Создаём полноразмерные canvas-источники с учётом позиции и прозрачности */
+    const W = Math.max(s1.width, s2.width);
+    const H = Math.max(s1.height, s2.height);
+
+    const bottomCanvas = document.createElement('canvas');
+    bottomCanvas.width = W; bottomCanvas.height = H;
+    const bCtx = bottomCanvas.getContext('2d');
+    bCtx.globalAlpha = bottom.opacity;
+    bCtx.drawImage(bottom.src, bottom.x, bottom.y, bottom.width, bottom.height);
+
+    const topCanvas = document.createElement('canvas');
+    topCanvas.width = W; topCanvas.height = H;
+    const tCtx = topCanvas.getContext('2d');
+    tCtx.globalAlpha = top.opacity;
+    tCtx.drawImage(top.src, top.x, top.y, top.width, top.height);
+
+    const out  = window.BlendingEngine.doubleExposure(bottomCanvas, topCanvas, opts);
     resultCanvas.width  = out.width;
     resultCanvas.height = out.height;
     resultCtx.drawImage(out, 0, 0);
@@ -684,8 +795,8 @@ function renderDoubleExposure() {
 ══════════════════════════════════════════════════ */
 
 function renderSplitScreen(mode) {
-    const s1 = getScaledSource(1);
-    const s2 = getScaledSource(2);
+    const s1 = getProcessedLayer(1);
+    const s2 = getProcessedLayer(2);
     if (!s1 || !s2) {
         showStatus('Для Split Screen нужны оба изображения.', 'info');
         return;
@@ -702,13 +813,16 @@ function renderSplitScreen(mode) {
     if (mode === 'split-v') {
         /* Вертикальный разделитель */
         const splitX = Math.round(W * pos);
-        resultCtx.drawImage(bottom.src, 0, 0, bottom.width, bottom.height);
+        resultCtx.globalAlpha = bottom.opacity;
+        resultCtx.drawImage(bottom.src, bottom.x, bottom.y, bottom.width, bottom.height);
         resultCtx.save();
         resultCtx.beginPath();
         resultCtx.rect(splitX, 0, W - splitX, H);
         resultCtx.clip();
-        resultCtx.drawImage(top.src, 0, 0, top.width, top.height);
+        resultCtx.globalAlpha = top.opacity;
+        resultCtx.drawImage(top.src, top.x, top.y, top.width, top.height);
         resultCtx.restore();
+        resultCtx.globalAlpha = 1;
 
         /* Линия разделителя */
         resultCtx.strokeStyle = 'rgba(255,255,255,0.8)';
@@ -720,13 +834,16 @@ function renderSplitScreen(mode) {
     } else {
         /* Горизонтальный разделитель */
         const splitY = Math.round(H * pos);
-        resultCtx.drawImage(bottom.src, 0, 0, bottom.width, bottom.height);
+        resultCtx.globalAlpha = bottom.opacity;
+        resultCtx.drawImage(bottom.src, bottom.x, bottom.y, bottom.width, bottom.height);
         resultCtx.save();
         resultCtx.beginPath();
         resultCtx.rect(0, splitY, W, H - splitY);
         resultCtx.clip();
-        resultCtx.drawImage(top.src, 0, 0, top.width, top.height);
+        resultCtx.globalAlpha = top.opacity;
+        resultCtx.drawImage(top.src, top.x, top.y, top.width, top.height);
         resultCtx.restore();
+        resultCtx.globalAlpha = 1;
 
         resultCtx.strokeStyle = 'rgba(255,255,255,0.8)';
         resultCtx.lineWidth   = 2;
@@ -836,10 +953,10 @@ function resetAll() {
     state.image2      = null;
     state.splitPos    = 50;
     state.layerOrder  = 'img1-top';
-    state.scale1      = 1.0;
-    state.scale2      = 1.0;
     state.orientation1 = 'auto';
     state.orientation2 = 'auto';
+    state.layer1 = { opacity: 100, scale: 100, x: 0, y: 0, brightness: 0, contrast: 0 };
+    state.layer2 = { opacity: 100, scale: 100, x: 0, y: 0, brightness: 0, contrast: 0 };
 
     /* Очищаем превью */
     [preview1, preview2].forEach(p => { p.src = ''; p.hidden = true; });
@@ -847,19 +964,19 @@ function resetAll() {
         z.querySelector('.drop-hint').hidden = false;
     });
 
-    /* Сбрасываем слайдеры */
+    /* Сбрасываем глобальные слайдеры */
     opacitySlider.value      = 50;
     brightnessSlider.value   = 0;
     contrastSlider.value     = 100;
     blendAmountSlider.value  = 100;
-    scaleSlider1.value       = 100;
-    scaleSlider2.value       = 100;
     opacityValue.textContent     = '50%';
     brightnessValue.textContent  = '0';
     contrastValue.textContent    = '100%';
     blendAmountValue.textContent = '100%';
-    scaleValue1.textContent      = '100%';
-    scaleValue2.textContent      = '100%';
+
+    /* Сбрасываем per-layer слайдеры */
+    resetLayerControls(1);
+    resetLayerControls(2);
 
     /* Сбрасываем ориентацию */
     document.querySelectorAll('input[name="orientation-1"]').forEach(r => {
@@ -885,6 +1002,9 @@ function resetAll() {
 
     /* Рисуем плейсхолдер */
     drawPlaceholder();
+
+    /* Восстановить активный слой */
+    setActiveLayer(1);
 
     hideSplitHandle();
     statusMsg.hidden = true;
@@ -1021,10 +1141,10 @@ function toggleComparisonMode() {
         comparisonBefore = document.createElement('canvas');
         comparisonBefore.width  = resultCanvas.width;
         comparisonBefore.height = resultCanvas.height;
-        const s1 = getScaledSource(1);
+        const s1 = getProcessedLayer(1);
         if (s1) {
             comparisonBefore.getContext('2d').drawImage(
-                s1.src, 0, 0, resultCanvas.width, resultCanvas.height);
+                s1.src, s1.x, s1.y, s1.width, s1.height);
         }
         /* Сохраняем «после» — текущий результат */
         comparisonAfter = document.createElement('canvas');
@@ -1414,6 +1534,7 @@ function showKeyboardShortcuts() {
         'Ctrl+Shift+S — Сохранить JPEG',
         'Ctrl+Z — Отменить',
         'Ctrl+Shift+Z / Ctrl+Y — Повторить',
+        'Tab — Переключить активный слой',
         'Space — Режим сравнения (или pan при зажатии)',
         'R — Сброс',
         'L — Живой предпросмотр',
@@ -1473,6 +1594,13 @@ function setupKeyboardShortcuts() {
         }
 
         if (inInput) return;
+
+        /* Tab — переключить активный слой */
+        if (e.key === 'Tab' && !e.ctrlKey && !e.shiftKey) {
+            e.preventDefault();
+            setActiveLayer(state.activeLayer === 1 ? 2 : 1);
+            return;
+        }
 
         /* Space — предотвратить прокрутку страницы только в активном режиме */
         if (e.code === 'Space' && spaceDown) {
@@ -1542,6 +1670,61 @@ function setupKeyboardShortcuts() {
 }
 
 /* ══════════════════════════════════════════════════
+   Per-layer controls helpers
+══════════════════════════════════════════════════ */
+
+/**
+ * Сбросить отображение per-layer слайдеров на значения по умолчанию
+ * @param {number} slot — 1 или 2
+ */
+function resetLayerControls(slot) {
+    const pfx = `layer${slot}`;
+    const setSlider = (id, val, suffix) => {
+        const el = $(id);
+        if (el) {
+            el.value = val;
+            const display = $(`${id}-value`);
+            if (display) display.textContent = val + suffix;
+        }
+    };
+    setSlider(`${pfx}-opacity`,    100, '%');
+    setSlider(`${pfx}-scale`,      100, '%');
+    setSlider(`${pfx}-x`,            0, 'px');
+    setSlider(`${pfx}-y`,            0, 'px');
+    setSlider(`${pfx}-brightness`,   0, '');
+    setSlider(`${pfx}-contrast`,     0, '');
+}
+
+/**
+ * Подключить per-layer слайдеры для заданного слоя
+ * @param {number} slot — 1 или 2
+ */
+function setupLayerControls(slot) {
+    const pfx   = `layer${slot}`;
+    const layer = slot === 1 ? state.layer1 : state.layer2;
+
+    const bindSlider = (id, prop, suffix, transform) => {
+        const slider  = $(id);
+        const display = $(`${id}-value`);
+        if (!slider) return;
+        if (display) display.textContent = slider.value + suffix;
+        slider.addEventListener('input', () => {
+            const raw = parseInt(slider.value, 10);
+            layer[prop] = transform ? transform(raw) : raw;
+            if (display) display.textContent = slider.value + suffix;
+            if (livePreviewEnabled) debouncedApply();
+        });
+    };
+
+    bindSlider(`${pfx}-opacity`,    'opacity',    '%');
+    bindSlider(`${pfx}-scale`,      'scale',      '%');
+    bindSlider(`${pfx}-x`,          'x',          'px');
+    bindSlider(`${pfx}-y`,          'y',          'px');
+    bindSlider(`${pfx}-brightness`, 'brightness', '');
+    bindSlider(`${pfx}-contrast`,   'contrast',   '');
+}
+
+/* ══════════════════════════════════════════════════
    Инициализация
 ══════════════════════════════════════════════════ */
 
@@ -1550,23 +1733,27 @@ function init() {
     setupDropZone(dropZone1, fileInput1, preview1, 1);
     setupDropZone(dropZone2, fileInput2, preview2, 2);
 
-    /* Слайдеры */
+    /* Глобальные слайдеры */
     setupSlider(opacitySlider,      opacityValue,      '%');
     setupSlider(brightnessSlider,   brightnessValue,   '');
     setupSlider(contrastSlider,     contrastValue,     '%');
     setupSlider(blendAmountSlider,  blendAmountValue,  '%');
 
-    /* Слайдеры масштаба */
-    setupSlider(scaleSlider1, scaleValue1, '%');
-    setupSlider(scaleSlider2, scaleValue2, '%');
-    scaleSlider1.addEventListener('input', () => {
-        state.scale1 = parseInt(scaleSlider1.value, 10) / 100;
-        scaleValue1.textContent = scaleSlider1.value + '%';
+    /* Per-layer слайдеры */
+    setupLayerControls(1);
+    setupLayerControls(2);
+
+    /* Кнопки сброса слоя */
+    const resetLayer1Btn = $('reset-layer-1');
+    const resetLayer2Btn = $('reset-layer-2');
+    if (resetLayer1Btn) resetLayer1Btn.addEventListener('click', () => {
+        state.layer1 = { opacity: 100, scale: 100, x: 0, y: 0, brightness: 0, contrast: 0 };
+        resetLayerControls(1);
         if (livePreviewEnabled) debouncedApply();
     });
-    scaleSlider2.addEventListener('input', () => {
-        state.scale2 = parseInt(scaleSlider2.value, 10) / 100;
-        scaleValue2.textContent = scaleSlider2.value + '%';
+    if (resetLayer2Btn) resetLayer2Btn.addEventListener('click', () => {
+        state.layer2 = { opacity: 100, scale: 100, x: 0, y: 0, brightness: 0, contrast: 0 };
+        resetLayerControls(2);
         if (livePreviewEnabled) debouncedApply();
     });
 
@@ -1697,6 +1884,7 @@ function init() {
 
     /* Начальная настройка */
     updateSliderVisibility();
+    setActiveLayer(1);
     resultCanvas.width  = 800;
     resultCanvas.height = 500;
     drawPlaceholder();
