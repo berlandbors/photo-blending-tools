@@ -29,6 +29,7 @@ const state = {
     image2: null,          // HTMLImageElement
     splitPos: 50,          // позиция разделителя (0–100)
     isDraggingSplit: false,
+    layerOrder: 'img1-top', // 'img1-top' | 'img2-top' | 'auto'
     scale1: 1.0,           // масштаб первого изображения (1.0 = 100%)
     scale2: 1.0,           // масштаб второго изображения
     orientation1: 'auto',  // 'auto' | 'landscape' | 'portrait'
@@ -69,6 +70,10 @@ const applyBtn       = $('apply-btn');
 const downloadPngBtn = $('download-png');
 const downloadJpgBtn = $('download-jpg');
 const resetBtn       = $('reset-btn');
+
+const uploadBtn1     = $('upload-btn-1');
+const uploadBtn2     = $('upload-btn-2');
+const swapLayersBtn  = $('swap-layers');
 
 const resultCanvas   = $('result-canvas');
 const resultCtx      = resultCanvas.getContext('2d');
@@ -268,6 +273,20 @@ function updateImageInfo(slot) {
     const h = rotated ? img.naturalWidth  : img.naturalHeight;
 
     info.textContent = `${w}×${h} px (${label})`;
+}
+
+/**
+ * Вернуть пару источников {bottom, top} с учётом порядка слоев из state.layerOrder.
+ * @returns {{ bottom: object|null, top: object|null }}
+ */
+function getOrderedSources() {
+    const s1 = getScaledSource(1);
+    const s2 = getScaledSource(2);
+    if (state.layerOrder === 'img2-top') {
+        return { bottom: s1, top: s2 };
+    }
+    /* 'img1-top' и 'auto' — img1 сверху */
+    return { bottom: s2, top: s1 };
 }
 
 /* ══════════════════════════════════════════════════
@@ -518,17 +537,18 @@ function renderOpacity() {
         showStatus('Для этого режима нужны оба изображения.', 'info');
         return;
     }
+    const { bottom, top } = getOrderedSources();
     const W = Math.max(s1.width,  s2.width);
     const H = Math.max(s1.height, s2.height);
 
     resultCanvas.width  = W;
     resultCanvas.height = H;
 
-    resultCtx.drawImage(s1.src, 0, 0, s1.width, s1.height);
+    resultCtx.drawImage(bottom.src, 0, 0, bottom.width, bottom.height);
 
     const alpha = parseInt(opacitySlider.value, 10) / 100;
     resultCtx.globalAlpha = alpha;
-    resultCtx.drawImage(s2.src, 0, 0, s2.width, s2.height);
+    resultCtx.drawImage(top.src, 0, 0, top.width, top.height);
     resultCtx.globalAlpha = 1;
 }
 
@@ -543,15 +563,16 @@ function renderCSSBlend(mode) {
         showStatus('Для этого режима нужны оба изображения.', 'info');
         return;
     }
+    const { bottom, top } = getOrderedSources();
     const W = Math.max(s1.width,  s2.width);
     const H = Math.max(s1.height, s2.height);
 
     resultCanvas.width  = W;
     resultCanvas.height = H;
 
-    resultCtx.drawImage(s1.src, 0, 0, s1.width, s1.height);
+    resultCtx.drawImage(bottom.src, 0, 0, bottom.width, bottom.height);
     resultCtx.globalCompositeOperation = mode;
-    resultCtx.drawImage(s2.src, 0, 0, s2.width, s2.height);
+    resultCtx.drawImage(top.src, 0, 0, top.width, top.height);
     resultCtx.globalCompositeOperation = 'source-over';
 }
 
@@ -581,7 +602,9 @@ function renderCanvasBlend(mode) {
         threshold:   80,
     };
 
-    const out = window.BlendingEngine.blendImages(s1.src, s2.src, internalMode, opts);
+    /* Применяем порядок слоев: blendImages(bottom, top, ...) */
+    const { bottom, top } = getOrderedSources();
+    const out = window.BlendingEngine.blendImages(bottom.src, top.src, internalMode, opts);
     resultCanvas.width  = out.width;
     resultCanvas.height = out.height;
     resultCtx.drawImage(out, 0, 0);
@@ -599,7 +622,8 @@ function renderDoubleExposure() {
         return;
     }
     const opts = { blendAmount: parseInt(blendAmountSlider.value, 10) };
-    const out  = window.BlendingEngine.doubleExposure(s1.src, s2.src, opts);
+    const { bottom, top } = getOrderedSources();
+    const out  = window.BlendingEngine.doubleExposure(bottom.src, top.src, opts);
     resultCanvas.width  = out.width;
     resultCanvas.height = out.height;
     resultCtx.drawImage(out, 0, 0);
@@ -616,6 +640,7 @@ function renderSplitScreen(mode) {
         showStatus('Для Split Screen нужны оба изображения.', 'info');
         return;
     }
+    const { bottom, top } = getOrderedSources();
     const W = Math.max(s1.width,  s2.width);
     const H = Math.max(s1.height, s2.height);
 
@@ -627,12 +652,12 @@ function renderSplitScreen(mode) {
     if (mode === 'split-v') {
         /* Вертикальный разделитель */
         const splitX = Math.round(W * pos);
-        resultCtx.drawImage(s1.src, 0, 0, s1.width, s1.height);
+        resultCtx.drawImage(bottom.src, 0, 0, bottom.width, bottom.height);
         resultCtx.save();
         resultCtx.beginPath();
         resultCtx.rect(splitX, 0, W - splitX, H);
         resultCtx.clip();
-        resultCtx.drawImage(s2.src, 0, 0, s2.width, s2.height);
+        resultCtx.drawImage(top.src, 0, 0, top.width, top.height);
         resultCtx.restore();
 
         /* Линия разделителя */
@@ -645,12 +670,12 @@ function renderSplitScreen(mode) {
     } else {
         /* Горизонтальный разделитель */
         const splitY = Math.round(H * pos);
-        resultCtx.drawImage(s1.src, 0, 0, s1.width, s1.height);
+        resultCtx.drawImage(bottom.src, 0, 0, bottom.width, bottom.height);
         resultCtx.save();
         resultCtx.beginPath();
         resultCtx.rect(0, splitY, W, H - splitY);
         resultCtx.clip();
-        resultCtx.drawImage(s2.src, 0, 0, s2.width, s2.height);
+        resultCtx.drawImage(top.src, 0, 0, top.width, top.height);
         resultCtx.restore();
 
         resultCtx.strokeStyle = 'rgba(255,255,255,0.8)';
@@ -760,6 +785,7 @@ function resetAll() {
     state.image1      = null;
     state.image2      = null;
     state.splitPos    = 50;
+    state.layerOrder  = 'img1-top';
     state.scale1      = 1.0;
     state.scale2      = 1.0;
     state.orientation1 = 'auto';
@@ -791,6 +817,11 @@ function resetAll() {
     });
     document.querySelectorAll('input[name="orientation-2"]').forEach(r => {
         r.checked = r.value === 'auto';
+    });
+
+    /* Сбрасываем порядок слоев */
+    document.querySelectorAll('input[name="layer-order"]').forEach(r => {
+        r.checked = r.value === 'img1-top';
     });
 
     /* Очищаем информацию об изображениях */
@@ -878,6 +909,45 @@ function init() {
             debouncedApply();
         });
     });
+
+    /* Кнопки загрузки */
+    if (uploadBtn1) {
+        uploadBtn1.addEventListener('click', e => {
+            e.stopPropagation();
+            fileInput1.click();
+        });
+    }
+    if (uploadBtn2) {
+        uploadBtn2.addEventListener('click', e => {
+            e.stopPropagation();
+            fileInput2.click();
+        });
+    }
+
+    /* Порядок слоев */
+    document.querySelectorAll('input[name="layer-order"]').forEach(radio => {
+        radio.addEventListener('change', e => {
+            state.layerOrder = e.target.value;
+            if (state.image1 && state.image2) debouncedApply();
+        });
+    });
+
+    /* Кнопка смены слоев */
+    if (swapLayersBtn) {
+        swapLayersBtn.addEventListener('click', () => {
+            if (state.layerOrder === 'img1-top') {
+                state.layerOrder = 'img2-top';
+                const r = $('layer-order-2');
+                if (r) r.checked = true;
+            } else {
+                /* 'img2-top' and 'auto' both swap to img1-top */
+                state.layerOrder = 'img1-top';
+                const r = $('layer-order-1');
+                if (r) r.checked = true;
+            }
+            if (state.image1 && state.image2) debouncedApply();
+        });
+    }
 
     /* Смена режима */
     modeSelect.addEventListener('change', () => {
