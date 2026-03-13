@@ -22,6 +22,10 @@
 | **Скролл боковой панели** | Плавная прокрутка при большом количестве элементов управления |
 | **Кнопки загрузки** | Явные кнопки для выбора файлов в дополнение к drag & drop |
 | **Управление слоями** | Выбор порядка наложения изображений (какое сверху/снизу) |
+| **Расширенные фильтры** | Насыщенность, Температура, Оттенок (Hue Shift) |
+| **Эффекты** | Размытие, Резкость, Виньетирование, HDR, Зерно пленки |
+| **Пресеты** | Быстрые настройки: Ч/Б, Сепия, Винтаж, Кино, Драма, Мечта, Гритти и др. |
+| **Система табов** | Организация настроек по категориям: Базовые, Фильтры, Эффекты |
 
 ### 🚀 Новые возможности
 
@@ -146,6 +150,10 @@ A fully-featured browser-based photo blending tool — no installation required.
 - **Double Exposure** — artistic double exposure effect
 - **Split Screen** — draggable vertical / horizontal divider
 - **Post-processing** — brightness & contrast adjustment
+- **Advanced Filters** — Saturation, Temperature, Hue Shift
+- **Effects** — Blur, Sharpness, Vignette, HDR, Film Grain
+- **Presets** — quick-apply filter/effect combinations (B&W, Sepia, Vintage, Cinema, Drama, etc.)
+- **Tab system** — layer settings organized by category: Basic, Filters, Effects
 - **Scaling** — independent resize of each photo (10%–200%)
 - **Orientation** — auto-detection and manual selection of landscape/portrait
 - **Resizable panel** — drag to resize or collapse the sidebar

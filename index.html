@@ -93,55 +93,146 @@
             <!-- Индивидуальные настройки слоя 1 -->
             <details class="layer-controls" id="layer-controls-1" open>
                 <summary>🎨 Слой 1</summary>
-                <div class="slider-row">
-                    <div class="slider-label">
-                        <span>Непрозрачность</span>
-                        <span class="slider-value" id="layer1-opacity-value">100%</span>
-                    </div>
-                    <input type="range" id="layer1-opacity" min="0" max="100" value="100"
-                           aria-label="Непрозрачность слоя 1">
+                <div class="layer-tabs">
+                    <button class="layer-tab-btn active" data-tab="basic" type="button">⚙️ Базовые</button>
+                    <button class="layer-tab-btn" data-tab="filters" type="button">🎨 Фильтры</button>
+                    <button class="layer-tab-btn" data-tab="effects" type="button">✨ Эффекты</button>
                 </div>
-                <div class="slider-row">
-                    <div class="slider-label">
-                        <span>Масштаб</span>
-                        <span class="slider-value" id="layer1-scale-value">100%</span>
+                <div class="layer-tab-content active" data-content="basic">
+                    <div class="slider-row">
+                        <div class="slider-label">
+                            <span>Непрозрачность</span>
+                            <span class="slider-value" id="layer1-opacity-value">100%</span>
+                        </div>
+                        <input type="range" id="layer1-opacity" min="0" max="100" value="100"
+                               aria-label="Непрозрачность слоя 1">
                     </div>
-                    <input type="range" id="layer1-scale" min="10" max="200" value="100" step="5"
-                           aria-label="Масштаб слоя 1">
-                </div>
-                <div class="slider-row">
-                    <div class="slider-label">
-                        <span>Позиция X</span>
-                        <span class="slider-value" id="layer1-x-value">0px</span>
+                    <div class="slider-row">
+                        <div class="slider-label">
+                            <span>Масштаб</span>
+                            <span class="slider-value" id="layer1-scale-value">100%</span>
+                        </div>
+                        <input type="range" id="layer1-scale" min="10" max="200" value="100" step="5"
+                               aria-label="Масштаб слоя 1">
                     </div>
-                    <input type="range" id="layer1-x" min="-500" max="500" value="0"
-                           aria-label="Горизонтальное смещение слоя 1">
-                </div>
-                <div class="slider-row">
-                    <div class="slider-label">
-                        <span>Позиция Y</span>
-                        <span class="slider-value" id="layer1-y-value">0px</span>
+                    <div class="slider-row">
+                        <div class="slider-label">
+                            <span>Позиция X</span>
+                            <span class="slider-value" id="layer1-x-value">0px</span>
+                        </div>
+                        <input type="range" id="layer1-x" min="-500" max="500" value="0"
+                               aria-label="Горизонтальное смещение слоя 1">
                     </div>
-                    <input type="range" id="layer1-y" min="-500" max="500" value="0"
-                           aria-label="Вертикальное смещение слоя 1">
-                </div>
-                <div class="slider-row">
-                    <div class="slider-label">
-                        <span>Яркость</span>
-                        <span class="slider-value" id="layer1-brightness-value">0</span>
+                    <div class="slider-row">
+                        <div class="slider-label">
+                            <span>Позиция Y</span>
+                            <span class="slider-value" id="layer1-y-value">0px</span>
+                        </div>
+                        <input type="range" id="layer1-y" min="-500" max="500" value="0"
+                               aria-label="Вертикальное смещение слоя 1">
                     </div>
-                    <input type="range" id="layer1-brightness" min="-100" max="100" value="0"
-                           aria-label="Яркость слоя 1">
-                </div>
-                <div class="slider-row">
-                    <div class="slider-label">
-                        <span>Контраст</span>
-                        <span class="slider-value" id="layer1-contrast-value">0</span>
+                    <div class="slider-row">
+                        <div class="slider-label">
+                            <span>☀️ Яркость</span>
+                            <span class="slider-value" id="layer1-brightness-value">0</span>
+                        </div>
+                        <input type="range" id="layer1-brightness" min="-100" max="100" value="0"
+                               aria-label="Яркость слоя 1">
                     </div>
-                    <input type="range" id="layer1-contrast" min="-100" max="100" value="0"
-                           aria-label="Контраст слоя 1">
+                    <div class="slider-row">
+                        <div class="slider-label">
+                            <span>🌓 Контраст</span>
+                            <span class="slider-value" id="layer1-contrast-value">0</span>
+                        </div>
+                        <input type="range" id="layer1-contrast" min="-100" max="100" value="0"
+                               aria-label="Контраст слоя 1">
+                    </div>
+                    <button type="button" class="reset-layer-btn" id="reset-layer-1">↺ Сбросить слой</button>
                 </div>
-                <button type="button" class="reset-layer-btn" id="reset-layer-1">↺ Сбросить слой</button>
+                <div class="layer-tab-content" data-content="filters">
+                    <div class="slider-row">
+                        <div class="slider-label">
+                            <span>🌈 Насыщенность</span>
+                            <span class="slider-value" id="layer1-saturation-value">0</span>
+                        </div>
+                        <input type="range" id="layer1-saturation" min="-100" max="100" value="0"
+                               aria-label="Насыщенность слоя 1">
+                    </div>
+                    <div class="slider-row">
+                        <div class="slider-label">
+                            <span>🌡️ Температура</span>
+                            <span class="slider-value" id="layer1-temperature-value">0</span>
+                        </div>
+                        <input type="range" id="layer1-temperature" min="-100" max="100" value="0"
+                               aria-label="Температура слоя 1">
+                    </div>
+                    <div class="slider-row">
+                        <div class="slider-label">
+                            <span>🎨 Оттенок</span>
+                            <span class="slider-value" id="layer1-hue-value">0°</span>
+                        </div>
+                        <input type="range" id="layer1-hue" min="-180" max="180" value="0"
+                               aria-label="Оттенок слоя 1">
+                    </div>
+                    <div class="filter-presets">
+                        <button class="preset-btn" data-preset="none" data-layer="1" type="button">Сброс</button>
+                        <button class="preset-btn" data-preset="bw" data-layer="1" type="button">Ч/Б</button>
+                        <button class="preset-btn" data-preset="sepia" data-layer="1" type="button">Сепия</button>
+                        <button class="preset-btn" data-preset="warm" data-layer="1" type="button">Тепло</button>
+                        <button class="preset-btn" data-preset="cold" data-layer="1" type="button">Холод</button>
+                        <button class="preset-btn" data-preset="vintage" data-layer="1" type="button">Винтаж</button>
+                    </div>
+                </div>
+                <div class="layer-tab-content" data-content="effects">
+                    <div class="slider-row">
+                        <div class="slider-label">
+                            <span>🌫️ Размытие</span>
+                            <span class="slider-value" id="layer1-blur-value">0</span>
+                        </div>
+                        <input type="range" id="layer1-blur" min="0" max="20" value="0" step="0.5"
+                               aria-label="Размытие слоя 1">
+                    </div>
+                    <div class="slider-row">
+                        <div class="slider-label">
+                            <span>✨ Резкость</span>
+                            <span class="slider-value" id="layer1-sharpness-value">0</span>
+                        </div>
+                        <input type="range" id="layer1-sharpness" min="0" max="100" value="0"
+                               aria-label="Резкость слоя 1">
+                    </div>
+                    <div class="slider-row">
+                        <div class="slider-label">
+                            <span>🌑 Виньетирование</span>
+                            <span class="slider-value" id="layer1-vignette-value">0</span>
+                        </div>
+                        <input type="range" id="layer1-vignette" min="0" max="100" value="0"
+                               aria-label="Виньетирование слоя 1">
+                    </div>
+                    <div class="slider-row">
+                        <div class="slider-label">
+                            <span>💎 HDR эффект</span>
+                            <span class="slider-value" id="layer1-hdr-value">0</span>
+                        </div>
+                        <input type="range" id="layer1-hdr" min="0" max="100" value="0"
+                               aria-label="HDR эффект слоя 1">
+                    </div>
+                    <div class="slider-row">
+                        <div class="slider-label">
+                            <span>🎬 Зерно пленки</span>
+                            <span class="slider-value" id="layer1-grain-value">0</span>
+                        </div>
+                        <input type="range" id="layer1-grain" min="0" max="100" value="0"
+                               aria-label="Зерно пленки слоя 1">
+                    </div>
+                    <div class="filter-presets">
+                        <button class="preset-btn" data-effect="none" data-layer="1" type="button">Сброс</button>
+                        <button class="preset-btn" data-effect="soft" data-layer="1" type="button">Мягко</button>
+                        <button class="preset-btn" data-effect="dramatic" data-layer="1" type="button">Драма</button>
+                        <button class="preset-btn" data-effect="dreamy" data-layer="1" type="button">Мечта</button>
+                        <button class="preset-btn" data-effect="gritty" data-layer="1" type="button">Гритти</button>
+                        <button class="preset-btn" data-effect="cinema" data-layer="1" type="button">Кино</button>
+                    </div>
+                </div>
             </details>
         </div>
 
@@ -187,55 +278,146 @@
             <!-- Индивидуальные настройки слоя 2 -->
             <details class="layer-controls inactive" id="layer-controls-2">
                 <summary>🖼️ Слой 2</summary>
-                <div class="slider-row">
-                    <div class="slider-label">
-                        <span>Непрозрачность</span>
-                        <span class="slider-value" id="layer2-opacity-value">100%</span>
-                    </div>
-                    <input type="range" id="layer2-opacity" min="0" max="100" value="100"
-                           aria-label="Непрозрачность слоя 2">
+                <div class="layer-tabs">
+                    <button class="layer-tab-btn active" data-tab="basic" type="button">⚙️ Базовые</button>
+                    <button class="layer-tab-btn" data-tab="filters" type="button">🎨 Фильтры</button>
+                    <button class="layer-tab-btn" data-tab="effects" type="button">✨ Эффекты</button>
                 </div>
-                <div class="slider-row">
-                    <div class="slider-label">
-                        <span>Масштаб</span>
-                        <span class="slider-value" id="layer2-scale-value">100%</span>
+                <div class="layer-tab-content active" data-content="basic">
+                    <div class="slider-row">
+                        <div class="slider-label">
+                            <span>Непрозрачность</span>
+                            <span class="slider-value" id="layer2-opacity-value">100%</span>
+                        </div>
+                        <input type="range" id="layer2-opacity" min="0" max="100" value="100"
+                               aria-label="Непрозрачность слоя 2">
                     </div>
-                    <input type="range" id="layer2-scale" min="10" max="200" value="100" step="5"
-                           aria-label="Масштаб слоя 2">
-                </div>
-                <div class="slider-row">
-                    <div class="slider-label">
-                        <span>Позиция X</span>
-                        <span class="slider-value" id="layer2-x-value">0px</span>
+                    <div class="slider-row">
+                        <div class="slider-label">
+                            <span>Масштаб</span>
+                            <span class="slider-value" id="layer2-scale-value">100%</span>
+                        </div>
+                        <input type="range" id="layer2-scale" min="10" max="200" value="100" step="5"
+                               aria-label="Масштаб слоя 2">
                     </div>
-                    <input type="range" id="layer2-x" min="-500" max="500" value="0"
-                           aria-label="Горизонтальное смещение слоя 2">
-                </div>
-                <div class="slider-row">
-                    <div class="slider-label">
-                        <span>Позиция Y</span>
-                        <span class="slider-value" id="layer2-y-value">0px</span>
+                    <div class="slider-row">
+                        <div class="slider-label">
+                            <span>Позиция X</span>
+                            <span class="slider-value" id="layer2-x-value">0px</span>
+                        </div>
+                        <input type="range" id="layer2-x" min="-500" max="500" value="0"
+                               aria-label="Горизонтальное смещение слоя 2">
                     </div>
-                    <input type="range" id="layer2-y" min="-500" max="500" value="0"
-                           aria-label="Вертикальное смещение слоя 2">
-                </div>
-                <div class="slider-row">
-                    <div class="slider-label">
-                        <span>Яркость</span>
-                        <span class="slider-value" id="layer2-brightness-value">0</span>
+                    <div class="slider-row">
+                        <div class="slider-label">
+                            <span>Позиция Y</span>
+                            <span class="slider-value" id="layer2-y-value">0px</span>
+                        </div>
+                        <input type="range" id="layer2-y" min="-500" max="500" value="0"
+                               aria-label="Вертикальное смещение слоя 2">
                     </div>
-                    <input type="range" id="layer2-brightness" min="-100" max="100" value="0"
-                           aria-label="Яркость слоя 2">
-                </div>
-                <div class="slider-row">
-                    <div class="slider-label">
-                        <span>Контраст</span>
-                        <span class="slider-value" id="layer2-contrast-value">0</span>
+                    <div class="slider-row">
+                        <div class="slider-label">
+                            <span>☀️ Яркость</span>
+                            <span class="slider-value" id="layer2-brightness-value">0</span>
+                        </div>
+                        <input type="range" id="layer2-brightness" min="-100" max="100" value="0"
+                               aria-label="Яркость слоя 2">
                     </div>
-                    <input type="range" id="layer2-contrast" min="-100" max="100" value="0"
-                           aria-label="Контраст слоя 2">
+                    <div class="slider-row">
+                        <div class="slider-label">
+                            <span>🌓 Контраст</span>
+                            <span class="slider-value" id="layer2-contrast-value">0</span>
+                        </div>
+                        <input type="range" id="layer2-contrast" min="-100" max="100" value="0"
+                               aria-label="Контраст слоя 2">
+                    </div>
+                    <button type="button" class="reset-layer-btn" id="reset-layer-2">↺ Сбросить слой</button>
                 </div>
-                <button type="button" class="reset-layer-btn" id="reset-layer-2">↺ Сбросить слой</button>
+                <div class="layer-tab-content" data-content="filters">
+                    <div class="slider-row">
+                        <div class="slider-label">
+                            <span>🌈 Насыщенность</span>
+                            <span class="slider-value" id="layer2-saturation-value">0</span>
+                        </div>
+                        <input type="range" id="layer2-saturation" min="-100" max="100" value="0"
+                               aria-label="Насыщенность слоя 2">
+                    </div>
+                    <div class="slider-row">
+                        <div class="slider-label">
+                            <span>🌡️ Температура</span>
+                            <span class="slider-value" id="layer2-temperature-value">0</span>
+                        </div>
+                        <input type="range" id="layer2-temperature" min="-100" max="100" value="0"
+                               aria-label="Температура слоя 2">
+                    </div>
+                    <div class="slider-row">
+                        <div class="slider-label">
+                            <span>🎨 Оттенок</span>
+                            <span class="slider-value" id="layer2-hue-value">0°</span>
+                        </div>
+                        <input type="range" id="layer2-hue" min="-180" max="180" value="0"
+                               aria-label="Оттенок слоя 2">
+                    </div>
+                    <div class="filter-presets">
+                        <button class="preset-btn" data-preset="none" data-layer="2" type="button">Сброс</button>
+                        <button class="preset-btn" data-preset="bw" data-layer="2" type="button">Ч/Б</button>
+                        <button class="preset-btn" data-preset="sepia" data-layer="2" type="button">Сепия</button>
+                        <button class="preset-btn" data-preset="warm" data-layer="2" type="button">Тепло</button>
+                        <button class="preset-btn" data-preset="cold" data-layer="2" type="button">Холод</button>
+                        <button class="preset-btn" data-preset="vintage" data-layer="2" type="button">Винтаж</button>
+                    </div>
+                </div>
+                <div class="layer-tab-content" data-content="effects">
+                    <div class="slider-row">
+                        <div class="slider-label">
+                            <span>🌫️ Размытие</span>
+                            <span class="slider-value" id="layer2-blur-value">0</span>
+                        </div>
+                        <input type="range" id="layer2-blur" min="0" max="20" value="0" step="0.5"
+                               aria-label="Размытие слоя 2">
+                    </div>
+                    <div class="slider-row">
+                        <div class="slider-label">
+                            <span>✨ Резкость</span>
+                            <span class="slider-value" id="layer2-sharpness-value">0</span>
+                        </div>
+                        <input type="range" id="layer2-sharpness" min="0" max="100" value="0"
+                               aria-label="Резкость слоя 2">
+                    </div>
+                    <div class="slider-row">
+                        <div class="slider-label">
+                            <span>🌑 Виньетирование</span>
+                            <span class="slider-value" id="layer2-vignette-value">0</span>
+                        </div>
+                        <input type="range" id="layer2-vignette" min="0" max="100" value="0"
+                               aria-label="Виньетирование слоя 2">
+                    </div>
+                    <div class="slider-row">
+                        <div class="slider-label">
+                            <span>💎 HDR эффект</span>
+                            <span class="slider-value" id="layer2-hdr-value">0</span>
+                        </div>
+                        <input type="range" id="layer2-hdr" min="0" max="100" value="0"
+                               aria-label="HDR эффект слоя 2">
+                    </div>
+                    <div class="slider-row">
+                        <div class="slider-label">
+                            <span>🎬 Зерно пленки</span>
+                            <span class="slider-value" id="layer2-grain-value">0</span>
+                        </div>
+                        <input type="range" id="layer2-grain" min="0" max="100" value="0"
+                               aria-label="Зерно пленки слоя 2">
+                    </div>
+                    <div class="filter-presets">
+                        <button class="preset-btn" data-effect="none" data-layer="2" type="button">Сброс</button>
+                        <button class="preset-btn" data-effect="soft" data-layer="2" type="button">Мягко</button>
+                        <button class="preset-btn" data-effect="dramatic" data-layer="2" type="button">Драма</button>
+                        <button class="preset-btn" data-effect="dreamy" data-layer="2" type="button">Мечта</button>
+                        <button class="preset-btn" data-effect="gritty" data-layer="2" type="button">Гритти</button>
+                        <button class="preset-btn" data-effect="cinema" data-layer="2" type="button">Кино</button>
+                    </div>
+                </div>
             </details>
         </div>
 
