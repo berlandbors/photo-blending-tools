@@ -33,6 +33,7 @@ const state = {
     scale2: 1.0,           // масштаб второго изображения
     orientation1: 'auto',  // 'auto' | 'landscape' | 'portrait'
     orientation2: 'auto',
+    layerOrder: 'img1-top', // 'img1-top' | 'img2-top' | 'auto'
 };
 
 /* ══════════════════════════════════════════════════
@@ -75,6 +76,11 @@ const resultCtx      = resultCanvas.getContext('2d');
 const splitHandle    = $('split-handle');
 const loadingOverlay = $('loading-overlay');
 const statusMsg      = $('status-message');
+
+const uploadBtn1     = $('upload-btn-1');
+const uploadBtn2     = $('upload-btn-2');
+const swapLayersBtn  = $('swap-layers-btn');
+const layerOrderRadios = document.querySelectorAll('input[name="layer-order"]');
 
 /* ══════════════════════════════════════════════════
    Утилиты
@@ -242,9 +248,20 @@ function getScaledSource(slot) {
 }
 
 /**
- * Обновить строку с информацией о размерах и ориентации изображения
- * @param {number} slot — 1 или 2
+ * Вернуть пару источников [нижний, верхний] с учётом порядка слоёв.
+ * @returns {{ bottom: object|null, top: object|null }}
  */
+function getOrderedSources() {
+    const s1 = getScaledSource(1);
+    const s2 = getScaledSource(2);
+    if (state.layerOrder === 'img2-top') {
+        return { bottom: s1, top: s2 };
+    }
+    /* 'img1-top' и 'auto' — изображение 1 сверху */
+    return { bottom: s2, top: s1 };
+}
+
+
 function updateImageInfo(slot) {
     const img  = slot === 1 ? state.image1    : state.image2;
     const info = slot === 1 ? imageInfo1      : imageInfo2;
@@ -325,13 +342,17 @@ async function handleFile(file, slot) {
             state.image1 = img;
             preview1.src     = img.src;
             preview1.hidden  = false;
-            $('drop-zone-1').querySelector('.drop-hint').hidden = true;
+            const dz1 = $('drop-zone-1');
+            dz1.querySelector('.drop-hint').hidden = true;
+            dz1.classList.add('has-image');
             updateImageInfo(1);
         } else {
             state.image2 = img;
             preview2.src     = img.src;
             preview2.hidden  = false;
-            $('drop-zone-2').querySelector('.drop-hint').hidden = true;
+            const dz2 = $('drop-zone-2');
+            dz2.querySelector('.drop-hint').hidden = true;
+            dz2.classList.add('has-image');
             updateImageInfo(2);
         }
         showStatus(`Изображение ${slot} загружено (${img.naturalWidth}×${img.naturalHeight} px)`, 'success');
@@ -512,23 +533,22 @@ function renderCollage(mode) {
 ══════════════════════════════════════════════════ */
 
 function renderOpacity() {
-    const s1 = getScaledSource(1);
-    const s2 = getScaledSource(2);
-    if (!s1 || !s2) {
+    const { bottom, top } = getOrderedSources();
+    if (!bottom || !top) {
         showStatus('Для этого режима нужны оба изображения.', 'info');
         return;
     }
-    const W = Math.max(s1.width,  s2.width);
-    const H = Math.max(s1.height, s2.height);
+    const W = Math.max(bottom.width,  top.width);
+    const H = Math.max(bottom.height, top.height);
 
     resultCanvas.width  = W;
     resultCanvas.height = H;
 
-    resultCtx.drawImage(s1.src, 0, 0, s1.width, s1.height);
+    resultCtx.drawImage(bottom.src, 0, 0, bottom.width, bottom.height);
 
     const alpha = parseInt(opacitySlider.value, 10) / 100;
     resultCtx.globalAlpha = alpha;
-    resultCtx.drawImage(s2.src, 0, 0, s2.width, s2.height);
+    resultCtx.drawImage(top.src, 0, 0, top.width, top.height);
     resultCtx.globalAlpha = 1;
 }
 
@@ -537,21 +557,20 @@ function renderOpacity() {
 ══════════════════════════════════════════════════ */
 
 function renderCSSBlend(mode) {
-    const s1 = getScaledSource(1);
-    const s2 = getScaledSource(2);
-    if (!s1 || !s2) {
+    const { bottom, top } = getOrderedSources();
+    if (!bottom || !top) {
         showStatus('Для этого режима нужны оба изображения.', 'info');
         return;
     }
-    const W = Math.max(s1.width,  s2.width);
-    const H = Math.max(s1.height, s2.height);
+    const W = Math.max(bottom.width,  top.width);
+    const H = Math.max(bottom.height, top.height);
 
     resultCanvas.width  = W;
     resultCanvas.height = H;
 
-    resultCtx.drawImage(s1.src, 0, 0, s1.width, s1.height);
+    resultCtx.drawImage(bottom.src, 0, 0, bottom.width, bottom.height);
     resultCtx.globalCompositeOperation = mode;
-    resultCtx.drawImage(s2.src, 0, 0, s2.width, s2.height);
+    resultCtx.drawImage(top.src, 0, 0, top.width, top.height);
     resultCtx.globalCompositeOperation = 'source-over';
 }
 
@@ -560,9 +579,8 @@ function renderCSSBlend(mode) {
 ══════════════════════════════════════════════════ */
 
 function renderCanvasBlend(mode) {
-    const s1 = getScaledSource(1);
-    const s2 = getScaledSource(2);
-    if (!s1 || !s2) {
+    const { bottom, top } = getOrderedSources();
+    if (!bottom || !top) {
         showStatus('Для этого режима нужны оба изображения.', 'info');
         return;
     }
@@ -581,7 +599,7 @@ function renderCanvasBlend(mode) {
         threshold:   80,
     };
 
-    const out = window.BlendingEngine.blendImages(s1.src, s2.src, internalMode, opts);
+    const out = window.BlendingEngine.blendImages(bottom.src, top.src, internalMode, opts);
     resultCanvas.width  = out.width;
     resultCanvas.height = out.height;
     resultCtx.drawImage(out, 0, 0);
@@ -592,14 +610,13 @@ function renderCanvasBlend(mode) {
 ══════════════════════════════════════════════════ */
 
 function renderDoubleExposure() {
-    const s1 = getScaledSource(1);
-    const s2 = getScaledSource(2);
-    if (!s1 || !s2) {
+    const { bottom, top } = getOrderedSources();
+    if (!bottom || !top) {
         showStatus('Для двойного экспонирования нужны оба изображения.', 'info');
         return;
     }
     const opts = { blendAmount: parseInt(blendAmountSlider.value, 10) };
-    const out  = window.BlendingEngine.doubleExposure(s1.src, s2.src, opts);
+    const out  = window.BlendingEngine.doubleExposure(bottom.src, top.src, opts);
     resultCanvas.width  = out.width;
     resultCanvas.height = out.height;
     resultCtx.drawImage(out, 0, 0);
@@ -764,11 +781,13 @@ function resetAll() {
     state.scale2      = 1.0;
     state.orientation1 = 'auto';
     state.orientation2 = 'auto';
+    state.layerOrder  = 'img1-top';
 
     /* Очищаем превью */
     [preview1, preview2].forEach(p => { p.src = ''; p.hidden = true; });
     [$('drop-zone-1'), $('drop-zone-2')].forEach(z => {
         z.querySelector('.drop-hint').hidden = false;
+        z.classList.remove('has-image');
     });
 
     /* Сбрасываем слайдеры */
@@ -792,6 +811,12 @@ function resetAll() {
     document.querySelectorAll('input[name="orientation-2"]').forEach(r => {
         r.checked = r.value === 'auto';
     });
+
+    /* Сбрасываем порядок слоёв */
+    layerOrderRadios.forEach(r => {
+        r.checked = r.value === 'img1-top';
+    });
+    localStorage.removeItem('layerOrder');
 
     /* Очищаем информацию об изображениях */
     imageInfo1.textContent = '';
@@ -879,6 +904,77 @@ function init() {
         });
     });
 
+    /* Кнопки выбора файла */
+    uploadBtn1.addEventListener('click', e => {
+        e.stopPropagation();
+        fileInput1.click();
+    });
+    uploadBtn2.addEventListener('click', e => {
+        e.stopPropagation();
+        fileInput2.click();
+    });
+
+    /* Радио-кнопки порядка слоёв */
+    layerOrderRadios.forEach(radio => {
+        radio.addEventListener('change', () => {
+            state.layerOrder = radio.value;
+            localStorage.setItem('layerOrder', state.layerOrder);
+            if (state.image1 && state.image2) {
+                debouncedApply();
+            }
+        });
+    });
+
+    /* Кнопка «Поменять местами» */
+    swapLayersBtn.addEventListener('click', () => {
+        /* Поменять изображения */
+        const tempImg = state.image1;
+        state.image1 = state.image2;
+        state.image2 = tempImg;
+
+        /* Поменять превью */
+        const tempSrc = preview1.src;
+        preview1.src  = preview2.src;
+        preview2.src  = tempSrc;
+        const tempHidden = preview1.hidden;
+        preview1.hidden  = preview2.hidden;
+        preview2.hidden  = tempHidden;
+
+        /* Поменять классы has-image на drop-zone */
+        const dz1HasImage = $('drop-zone-1').classList.contains('has-image');
+        const dz2HasImage = $('drop-zone-2').classList.contains('has-image');
+        $('drop-zone-1').classList.toggle('has-image', dz2HasImage);
+        $('drop-zone-2').classList.toggle('has-image', dz1HasImage);
+
+        /* Поменять видимость drop-hint */
+        const hint1 = $('drop-zone-1').querySelector('.drop-hint');
+        const hint2 = $('drop-zone-2').querySelector('.drop-hint');
+        const hint1Hidden = hint1.hidden;
+        hint1.hidden = hint2.hidden;
+        hint2.hidden = hint1Hidden;
+
+        /* Обновить информацию об изображениях */
+        updateImageInfo(1);
+        updateImageInfo(2);
+
+        /* Применить изменения */
+        if (state.image1 && state.image2) {
+            debouncedApply();
+        }
+
+        /* Визуальная анимация */
+        if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            swapLayersBtn.style.transition = 'transform 0.3s ease';
+            swapLayersBtn.style.transform  = 'rotate(180deg)';
+            setTimeout(() => {
+                swapLayersBtn.style.transform = '';
+                setTimeout(() => {
+                    swapLayersBtn.style.transition = '';
+                }, 300);
+            }, 300);
+        }
+    });
+
     /* Смена режима */
     modeSelect.addEventListener('change', () => {
         updateSliderVisibility();
@@ -897,6 +993,14 @@ function init() {
     resultCanvas.width  = 800;
     resultCanvas.height = 500;
     drawPlaceholder();
+
+    /* Восстановить порядок слоёв из localStorage */
+    const savedLayerOrder = localStorage.getItem('layerOrder');
+    if (savedLayerOrder) {
+        state.layerOrder = savedLayerOrder;
+        const savedRadio = document.querySelector(`input[name="layer-order"][value="${savedLayerOrder}"]`);
+        if (savedRadio) savedRadio.checked = true;
+    }
 }
 
 /* Запуск после полной загрузки DOM */

@@ -16,6 +16,9 @@
 | **Canvas Blending** | Попиксельные алгоритмы (см. ниже) |
 | **Double Exposure** | Художественное двойное экспонирование |
 | **Split Screen** | Вертикальный / горизонтальный разделитель |
+| **Управление слоями** | Выбор порядка наложения (1 сверху, 2 сверху, авто) |
+| **Удобная загрузка** | Явные кнопки «📂 Выбрать файл» + drag & drop |
+| **Прокручиваемая панель** | Стилизованный скроллбар для большого числа настроек |
 | **Масштабирование** | Независимое изменение размера каждой фотографии (10%–200%) |
 | **Ориентация** | Автоопределение и ручной выбор альбомной/книжной ориентации |
 | **Улучшенные слайдеры** | Точный контроль без случайных перескоков |
@@ -45,14 +48,18 @@
 1. Откройте `index.html` в любом современном браузере (Chrome, Firefox, Edge, Safari).
 2. Загрузите **два изображения** (перетащите или нажмите на зоны загрузки).  
    Поддерживаемые форматы: **JPG, PNG, GIF, WebP** — до **10 МБ** каждый.
-3. Выберите **режим смешивания** из выпадающего списка.
-4. Настройте параметры с помощью **слайдеров** (прозрачность, яркость, контраст, интенсивность).
-5. **Настройте изображения** (опционально):
+3. **Управление изображениями**:
+   - Нажмите **«📂 Выбрать файл»** или перетащите изображение в зону загрузки
+   - Выберите **порядок слоёв** — какое изображение будет сверху
+   - Используйте **«⇅ Поменять местами»** для быстрой смены
+4. Выберите **режим смешивания** из выпадающего списка.
+5. Настройте параметры с помощью **слайдеров** (прозрачность, яркость, контраст, интенсивность).
+6. **Настройте изображения** (опционально):
    - **Масштаб** — измените размер каждой фотографии от 10% до 200%
    - **Ориентация** — поверните изображение для альбомной или книжной компоновки
    - Размеры и ориентация изображения отображаются под зоной загрузки
-6. Нажмите **✨ Применить**.
-7. Скачайте результат в **PNG** или **JPEG**.
+7. Нажмите **✨ Применить**.
+8. Скачайте результат в **PNG** или **JPEG**.
 
 ---
 
@@ -111,6 +118,9 @@ A fully-featured browser-based photo blending tool — no installation required.
 - **Canvas Pixel Blending** — 13 custom algorithms (Average, Additive, Multiply, Screen, Overlay, Difference, Lighten Only, Darken Only, Luminosity, Gradient H/V/Radial, Chroma Key)
 - **Double Exposure** — artistic double exposure effect
 - **Split Screen** — draggable vertical / horizontal divider
+- **Layer Order** — choose which image is on top (Image 1, Image 2, or Auto)
+- **File selection buttons** — explicit «📂 Choose file» buttons + drag & drop
+- **Scrollable panel** — styled scrollbar for many controls
 - **Post-processing** — brightness & contrast adjustment
 - **Scaling** — independent resize of each photo (10%–200%)
 - **Orientation** — auto-detection and manual selection of landscape/portrait
@@ -118,10 +128,11 @@ A fully-featured browser-based photo blending tool — no installation required.
 
 ### Usage
 1. Open `index.html` in a modern browser.
-2. Upload two images (drag & drop or click).
-3. Choose a blend mode and adjust sliders.
-4. Optionally adjust **scale** (10–200%) and **orientation** (Auto / Landscape / Portrait) per image.
-5. Click **Apply** and download as PNG or JPEG.
+2. Upload two images via **«📂 Choose file»** buttons, drag & drop, or click the drop zones.
+3. Choose a **layer order** — which image should be on top — and use **«⇅ Swap»** to quickly switch.
+4. Choose a blend mode and adjust sliders.
+5. Optionally adjust **scale** (10–200%) and **orientation** (Auto / Landscape / Portrait) per image.
+6. Click **Apply** and download as PNG or JPEG.
 
 ### License
 MIT
