@@ -51,13 +51,9 @@ const preview2      = $('preview-2');
 
 const modeSelect    = $('blend-mode');
 const opacitySlider = $('opacity-slider');
-const brightnessSlider = $('brightness-slider');
-const contrastSlider   = $('contrast-slider');
 const blendAmountSlider = $('blend-amount-slider');
 
 const opacityValue      = $('opacity-value');
-const brightnessValue   = $('brightness-value');
-const contrastValue     = $('contrast-value');
 const blendAmountValue  = $('blend-amount-value');
 
 const imageInfo1    = $('image-info-1');
@@ -564,12 +560,7 @@ function apply() {
             renderCanvasBlend(mode);
         }
 
-        /* Постобработка: яркость / контраст */
-        const brightness = parseInt(brightnessSlider.value, 10);
-        const contrast   = parseInt(contrastSlider.value, 10);
-        if (brightness !== 0 || contrast !== 100) {
-            window.BlendingEngine.applyBrightnessContrast(resultCanvas, brightness, contrast);
-        }
+        /* Постобработка удалена: яркость/контраст управляются на уровне каждого слоя */
 
         saveState();
 
@@ -966,12 +957,8 @@ function resetAll() {
 
     /* Сбрасываем глобальные слайдеры */
     opacitySlider.value      = 50;
-    brightnessSlider.value   = 0;
-    contrastSlider.value     = 100;
     blendAmountSlider.value  = 100;
     opacityValue.textContent     = '50%';
-    brightnessValue.textContent  = '0';
-    contrastValue.textContent    = '100%';
     blendAmountValue.textContent = '100%';
 
     /* Сбрасываем per-layer слайдеры */
@@ -1041,8 +1028,6 @@ function drawPlaceholder() {
 
 function updateAllSliderValues() {
     opacityValue.textContent     = opacitySlider.value + '%';
-    brightnessValue.textContent  = brightnessSlider.value;
-    contrastValue.textContent    = contrastSlider.value + '%';
     blendAmountValue.textContent = blendAmountSlider.value + '%';
 }
 
@@ -1056,8 +1041,6 @@ function saveState() {
     const currentState = {
         mode:        modeSelect.value,
         opacity:     opacitySlider.value,
-        brightness:  brightnessSlider.value,
-        contrast:    contrastSlider.value,
         blendAmount: blendAmountSlider.value,
         layerOrder:  state.layerOrder,
         canvasData:  resultCanvas.toDataURL()
@@ -1095,8 +1078,6 @@ function redo() {
 function restoreState(savedState) {
     modeSelect.value         = savedState.mode;
     opacitySlider.value      = savedState.opacity;
-    brightnessSlider.value   = savedState.brightness;
-    contrastSlider.value     = savedState.contrast;
     blendAmountSlider.value  = savedState.blendAmount;
     state.layerOrder         = savedState.layerOrder;
 
@@ -1211,8 +1192,6 @@ function savePreset() {
         name:        name,
         mode:        modeSelect.value,
         opacity:     opacitySlider.value,
-        brightness:  brightnessSlider.value,
-        contrast:    contrastSlider.value,
         blendAmount: blendAmountSlider.value,
         layerOrder:  state.layerOrder
     };
@@ -1229,8 +1208,6 @@ function loadPreset(presetId) {
 
     modeSelect.value         = preset.mode;
     opacitySlider.value      = preset.opacity;
-    brightnessSlider.value   = preset.brightness;
-    contrastSlider.value     = preset.contrast;
     blendAmountSlider.value  = preset.blendAmount;
     state.layerOrder         = preset.layerOrder;
 
@@ -1735,8 +1712,6 @@ function init() {
 
     /* Глобальные слайдеры */
     setupSlider(opacitySlider,      opacityValue,      '%');
-    setupSlider(brightnessSlider,   brightnessValue,   '');
-    setupSlider(contrastSlider,     contrastValue,     '%');
     setupSlider(blendAmountSlider,  blendAmountValue,  '%');
 
     /* Per-layer слайдеры */

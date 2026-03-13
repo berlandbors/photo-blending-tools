@@ -744,19 +744,68 @@ input[type="range"]:focus::-moz-range-thumb {
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
-    padding: 14px 16px;
     margin-top: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
     transition: opacity var(--transition);
 }
 
-.layer-controls .panel-title {
+.layer-controls > summary {
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-muted);
+    border-radius: var(--radius-md);
+    transition: background var(--transition), color var(--transition);
+    user-select: none;
+}
+
+.layer-controls > summary::-webkit-details-marker {
+    display: none;
+}
+
+.layer-controls > summary::after {
+    content: '▶';
+    font-size: 0.6rem;
+    margin-left: auto;
+    transition: transform var(--transition);
+}
+
+.layer-controls[open] > summary {
     border-bottom: 1px solid var(--color-border);
-    padding-bottom: 6px;
-    margin-bottom: 2px;
-    font-size: 0.75rem;
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    color: var(--color-text);
+}
+
+.layer-controls[open] > summary::after {
+    transform: rotate(90deg);
+}
+
+.layer-controls > summary:hover {
+    background: rgba(88, 166, 255, 0.08);
+    color: var(--color-text);
+}
+
+.layer-controls > .slider-row,
+.layer-controls > .reset-layer-btn {
+    margin: 0 16px;
+}
+
+.layer-controls > .slider-row {
+    margin-bottom: 10px;
+}
+
+.layer-controls > .slider-row:first-of-type {
+    margin-top: 12px;
+}
+
+.layer-controls > .reset-layer-btn {
+    margin-bottom: 14px;
 }
 
 .layer-controls.inactive {
@@ -764,9 +813,24 @@ input[type="range"]:focus::-moz-range-thumb {
     pointer-events: none;
 }
 
+.layer-controls.inactive > summary {
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+/* Section title above control panel */
+.panel-section-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-muted);
+    margin: 4px 0 8px;
+}
+
 /* Кнопка сброса слоя */
 .reset-layer-btn {
-    margin-top: 4px;
+    display: block;
     padding: 7px 12px;
     background: var(--color-surface-2);
     color: var(--color-text-muted);
@@ -775,7 +839,6 @@ input[type="range"]:focus::-moz-range-thumb {
     font-size: 0.8rem;
     cursor: pointer;
     transition: all var(--transition);
-    align-self: flex-start;
 }
 
 .reset-layer-btn:hover {
