@@ -81,6 +81,8 @@ const resetBtn       = $('reset-btn');
 
 const uploadBtn1     = $('upload-btn-1');
 const uploadBtn2     = $('upload-btn-2');
+const deleteLayer1Btn = $('delete-layer-1');
+const deleteLayer2Btn = $('delete-layer-2');
 const swapLayersBtn  = $('swap-layers');
 
 const resultCanvas   = $('result-canvas');
@@ -462,12 +464,14 @@ async function handleFile(file, slot) {
             preview1.hidden  = false;
             $('drop-zone-1').querySelector('.drop-hint').hidden = true;
             updateImageInfo(1);
+            deleteLayer1Btn.disabled = false;
         } else {
             state.image2 = img;
             preview2.src     = img.src;
             preview2.hidden  = false;
             $('drop-zone-2').querySelector('.drop-hint').hidden = true;
             updateImageInfo(2);
+            deleteLayer2Btn.disabled = false;
         }
         setActiveLayer(slot);
         showStatus(`Изображение ${slot} загружено (${img.naturalWidth}×${img.naturalHeight} px)`, 'success');
@@ -476,6 +480,46 @@ async function handleFile(file, slot) {
         showStatus(err.message, 'error');
     } finally {
         setLoading(false);
+    }
+}
+
+/* ══════════════════════════════════════════════════
+   Удаление изображения из слоя
+══════════════════════════════════════════════════ */
+
+/**
+ * Удаляет изображение из слоя, сохраняя настройки слоя
+ * @param {1|2} slot - номер слоя
+ */
+function deleteLayer(slot) {
+    if (slot === 1) {
+        state.image1 = null;
+        preview1.hidden = true;
+        preview1.src = '';
+        $('drop-zone-1').querySelector('.drop-hint').hidden = false;
+        fileInput1.value = '';
+        deleteLayer1Btn.disabled = true;
+        imageInfo1.textContent = '';
+        showStatus('Изображение 1 удалено', 'success');
+    } else {
+        state.image2 = null;
+        preview2.hidden = true;
+        preview2.src = '';
+        $('drop-zone-2').querySelector('.drop-hint').hidden = false;
+        fileInput2.value = '';
+        deleteLayer2Btn.disabled = true;
+        imageInfo2.textContent = '';
+        showStatus('Изображение 2 удалено', 'success');
+    }
+
+    if (state.image1 || state.image2) {
+        if (livePreviewEnabled) debouncedApply();
+    } else {
+        resultCanvas.width  = 800;
+        resultCanvas.height = 500;
+        resultCtx.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
+        drawPlaceholder();
+        hideSplitHandle();
     }
 }
 
@@ -981,6 +1025,10 @@ function resetAll() {
     /* Очищаем информацию об изображениях */
     imageInfo1.textContent = '';
     imageInfo2.textContent = '';
+
+    /* Деактивируем кнопки удаления */
+    deleteLayer1Btn.disabled = true;
+    deleteLayer2Btn.disabled = true;
 
     /* Очищаем холст */
     resultCanvas.width  = 800;
@@ -1761,6 +1809,10 @@ function init() {
             fileInput2.click();
         });
     }
+
+    /* Кнопки удаления слоёв */
+    deleteLayer1Btn.addEventListener('click', () => deleteLayer(1));
+    deleteLayer2Btn.addEventListener('click', () => deleteLayer(2));
 
     /* Порядок слоев */
     document.querySelectorAll('input[name="layer-order"]').forEach(radio => {
