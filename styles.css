@@ -1491,3 +1491,78 @@ input[type="range"]:focus::-moz-range-thumb {
         transition: none !important;
     }
 }
+
+/* ══════════════════════════════════════════════════════
+   Табы слоёв
+══════════════════════════════════════════════════════ */
+.layer-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: 4px;
+}
+
+.layer-tab-btn {
+    flex: 1;
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    padding: 6px 8px;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    cursor: pointer;
+    font-size: 0.75em;
+    transition: all var(--transition);
+    font-weight: 600;
+}
+
+.layer-tab-btn:hover {
+    background: var(--color-surface);
+    color: var(--color-text);
+}
+
+.layer-tab-btn.active {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    color: white;
+}
+
+.layer-tab-content {
+    display: none;
+}
+
+.layer-tab-content.active {
+    display: block;
+}
+
+/* ══════════════════════════════════════════════════════
+   Пресеты фильтров и эффектов
+══════════════════════════════════════════════════════ */
+.filter-presets {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.preset-btn {
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 0.75em;
+    transition: all var(--transition);
+    font-weight: 600;
+}
+
+.preset-btn:hover {
+    background: var(--color-surface);
+    border-color: var(--color-accent);
+    color: var(--color-text);
+}
+
+.preset-btn:active {
+    transform: scale(0.95);
+}

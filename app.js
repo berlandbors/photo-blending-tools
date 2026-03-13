@@ -33,8 +33,10 @@ const state = {
     orientation1: 'auto',  // 'auto' | 'landscape' | 'portrait'
     orientation2: 'auto',
     activeLayer: 1,        // активный слой: 1 или 2
-    layer1: { opacity: 100, scale: 100, x: 0, y: 0, brightness: 0, contrast: 0 },
-    layer2: { opacity: 100, scale: 100, x: 0, y: 0, brightness: 0, contrast: 0 },
+    layer1: { opacity: 100, scale: 100, x: 0, y: 0, brightness: 0, contrast: 0,
+               saturation: 0, temperature: 0, hue: 0, blur: 0, sharpness: 0, vignette: 0, hdr: 0, grain: 0 },
+    layer2: { opacity: 100, scale: 100, x: 0, y: 0, brightness: 0, contrast: 0,
+               saturation: 0, temperature: 0, hue: 0, blur: 0, sharpness: 0, vignette: 0, hdr: 0, grain: 0 },
 };
 
 /* ══════════════════════════════════════════════════
@@ -330,13 +332,38 @@ function getProcessedLayer(slot) {
     canvas.width  = scaledW;
     canvas.height = scaledH;
     const ctx = canvas.getContext('2d');
+
+    /* Применить размытие / резкость через CSS-фильтр при рисовании */
+    const cssFilters = [];
+    if (layer.blur > 0) {
+        cssFilters.push(`blur(${layer.blur}px)`);
+    }
+    if (layer.sharpness > 0) {
+        const sharpAmount = 1 + (layer.sharpness / 50);
+        cssFilters.push(`contrast(${sharpAmount.toFixed(3)})`);
+    }
+    if (cssFilters.length > 0) {
+        ctx.filter = cssFilters.join(' ');
+    }
     ctx.drawImage(oriented, 0, 0, scaledW, scaledH);
+    ctx.filter = 'none';
 
     /* Применить per-layer яркость/контраст */
     if (layer.brightness !== 0 || layer.contrast !== 0) {
         /* contrast: per-layer диапазон -100..100 → преобразуем в 0..200 (100 = без изменений) */
         const contrastAdj = 100 + layer.contrast;
         window.BlendingEngine.applyBrightnessContrast(canvas, layer.brightness, contrastAdj);
+    }
+
+    /* Применить расширенные фильтры: насыщенность, температура, оттенок, HDR, зерно */
+    if (layer.saturation !== 0 || layer.temperature !== 0 || layer.hue !== 0 ||
+            layer.hdr > 0 || layer.grain > 0) {
+        applyLayerFilters(canvas, layer);
+    }
+
+    /* Применить виньетирование */
+    if (layer.vignette > 0) {
+        applyVignette(canvas, layer.vignette);
     }
 
     return {
@@ -990,8 +1017,10 @@ function resetAll() {
     state.layerOrder  = 'img1-top';
     state.orientation1 = 'auto';
     state.orientation2 = 'auto';
-    state.layer1 = { opacity: 100, scale: 100, x: 0, y: 0, brightness: 0, contrast: 0 };
-    state.layer2 = { opacity: 100, scale: 100, x: 0, y: 0, brightness: 0, contrast: 0 };
+    state.layer1 = { opacity: 100, scale: 100, x: 0, y: 0, brightness: 0, contrast: 0,
+                     saturation: 0, temperature: 0, hue: 0, blur: 0, sharpness: 0, vignette: 0, hdr: 0, grain: 0 };
+    state.layer2 = { opacity: 100, scale: 100, x: 0, y: 0, brightness: 0, contrast: 0,
+                     saturation: 0, temperature: 0, hue: 0, blur: 0, sharpness: 0, vignette: 0, hdr: 0, grain: 0 };
 
     /* Очищаем превью */
     [preview1, preview2].forEach(p => { p.src = ''; p.hidden = true; });
@@ -1698,10 +1727,311 @@ function setupKeyboardShortcuts() {
    Per-layer controls helpers
 ══════════════════════════════════════════════════ */
 
+/* ── Вспомогательные функции для пространства HSL ── */
+
+function rgbToHsl(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    let h, s;
+    const l = (max + min) / 2;
+
+    if (max === min) {
+        h = s = 0;
+    } else {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+            case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+            case g: h = ((b - r) / d + 2) / 6; break;
+            default: h = ((r - g) / d + 4) / 6; break;
+        }
+    }
+    return [h, s, l];
+}
+
+function hslToRgb(h, s, l) {
+    let r, g, b;
+
+    if (s === 0) {
+        r = g = b = l;
+    } else {
+        const hue2rgb = (p, q, t) => {
+            if (t < 0) t += 1;
+            if (t > 1) t -= 1;
+            if (t < 1 / 6) return p + (q - p) * 6 * t;
+            if (t < 1 / 2) return q;
+            if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+            return p;
+        };
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        r = hue2rgb(p, q, h + 1 / 3);
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - 1 / 3);
+    }
+    return [r * 255, g * 255, b * 255];
+}
+
 /**
- * Сбросить отображение per-layer слайдеров на значения по умолчанию
- * @param {number} slot — 1 или 2
+ * Применить расширенные фильтры (насыщенность, температура, оттенок, HDR, зерно) к canvas.
+ * @param {HTMLCanvasElement} canvas
+ * @param {object} layer
  */
+function applyLayerFilters(canvas, layer) {
+    const ctx  = canvas.getContext('2d');
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imgData.data;
+
+    for (let i = 0; i < data.length; i += 4) {
+        let r = data[i];
+        let g = data[i + 1];
+        let b = data[i + 2];
+
+        /* Насыщенность */
+        if (layer.saturation !== 0) {
+            const gray = 0.2989 * r + 0.5870 * g + 0.1140 * b;
+            const satFactor = 1 + (layer.saturation / 100);
+            r = gray + (r - gray) * satFactor;
+            g = gray + (g - gray) * satFactor;
+            b = gray + (b - gray) * satFactor;
+        }
+
+        /* Температура */
+        if (layer.temperature !== 0) {
+            const temp = layer.temperature / 100;
+            r += temp * 50;
+            b -= temp * 50;
+        }
+
+        /* Оттенок (hue shift) */
+        if (layer.hue !== 0) {
+            const hsl = rgbToHsl(
+                Math.max(0, Math.min(255, r)),
+                Math.max(0, Math.min(255, g)),
+                Math.max(0, Math.min(255, b))
+            );
+            hsl[0] = ((hsl[0] + layer.hue / 360) % 1 + 1) % 1;
+            const rgb = hslToRgb(hsl[0], hsl[1], hsl[2]);
+            r = rgb[0];
+            g = rgb[1];
+            b = rgb[2];
+        }
+
+        /* HDR эффект */
+        if (layer.hdr > 0) {
+            const hdrFactor = layer.hdr / 100;
+            const avg = (r + g + b) / 3;
+            if (avg > 128) {
+                r = r + (255 - r) * hdrFactor * 0.3;
+                g = g + (255 - g) * hdrFactor * 0.3;
+                b = b + (255 - b) * hdrFactor * 0.3;
+            } else {
+                r = r * (1 - hdrFactor * 0.3);
+                g = g * (1 - hdrFactor * 0.3);
+                b = b * (1 - hdrFactor * 0.3);
+            }
+        }
+
+        data[i]     = Math.max(0, Math.min(255, r));
+        data[i + 1] = Math.max(0, Math.min(255, g));
+        data[i + 2] = Math.max(0, Math.min(255, b));
+    }
+
+    /* Зерно пленки */
+    if (layer.grain > 0) {
+        const grainAmount = layer.grain / 100;
+        for (let i = 0; i < data.length; i += 4) {
+            const noise = (Math.random() - 0.5) * grainAmount * 50;
+            data[i]     = Math.max(0, Math.min(255, data[i]     + noise));
+            data[i + 1] = Math.max(0, Math.min(255, data[i + 1] + noise));
+            data[i + 2] = Math.max(0, Math.min(255, data[i + 2] + noise));
+        }
+    }
+
+    ctx.putImageData(imgData, 0, 0);
+}
+
+/**
+ * Применить виньетирование (тёмный радиальный градиент) к canvas.
+ * @param {HTMLCanvasElement} canvas
+ * @param {number} strength — 0–100
+ */
+function applyVignette(canvas, strength) {
+    const ctx    = canvas.getContext('2d');
+    const w      = canvas.width;
+    const h      = canvas.height;
+    const cx     = w / 2;
+    const cy     = h / 2;
+    const radius = Math.max(w, h);
+    const vignetteStrength = strength / 100;
+
+    const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+    gradient.addColorStop(0,   'rgba(0,0,0,0)');
+    gradient.addColorStop(0.7, 'rgba(0,0,0,0)');
+    gradient.addColorStop(1,   `rgba(0,0,0,${vignetteStrength.toFixed(3)})`);
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, w, h);
+}
+
+/**
+ * Синхронизировать все slider-элементы слоя с текущим состоянием.
+ * Используется после применения пресета.
+ * @param {number} layerNum — 1 или 2
+ */
+function updateAllLayerControls(layerNum) {
+    const layer = layerNum === 1 ? state.layer1 : state.layer2;
+    const pfx   = `layer${layerNum}`;
+
+    const params = [
+        { id: `${pfx}-opacity`,     val: layer.opacity,     suffix: '%'  },
+        { id: `${pfx}-scale`,       val: layer.scale,       suffix: '%'  },
+        { id: `${pfx}-x`,           val: layer.x,           suffix: 'px' },
+        { id: `${pfx}-y`,           val: layer.y,           suffix: 'px' },
+        { id: `${pfx}-brightness`,  val: layer.brightness,  suffix: ''   },
+        { id: `${pfx}-contrast`,    val: layer.contrast,    suffix: ''   },
+        { id: `${pfx}-saturation`,  val: layer.saturation,  suffix: ''   },
+        { id: `${pfx}-temperature`, val: layer.temperature, suffix: ''   },
+        { id: `${pfx}-blur`,        val: layer.blur,        suffix: ''   },
+        { id: `${pfx}-sharpness`,   val: layer.sharpness,   suffix: ''   },
+        { id: `${pfx}-vignette`,    val: layer.vignette,    suffix: ''   },
+        { id: `${pfx}-hdr`,         val: layer.hdr,         suffix: ''   },
+        { id: `${pfx}-grain`,       val: layer.grain,       suffix: ''   },
+    ];
+
+    params.forEach(({ id, val, suffix }) => {
+        const el = $(id);
+        if (el) {
+            el.value = val;
+            const display = $(`${id}-value`);
+            if (display) display.textContent = Math.round(val) + suffix;
+        }
+    });
+
+    /* Оттенок имеет суффикс '°' */
+    const hueEl = $(`${pfx}-hue`);
+    if (hueEl) {
+        hueEl.value = layer.hue;
+        const hueDisplay = $(`${pfx}-hue-value`);
+        if (hueDisplay) hueDisplay.textContent = `${Math.round(layer.hue)}°`;
+    }
+}
+
+/**
+ * Переключить таб внутри layer-controls.
+ * @param {number} layerNum — 1 или 2
+ * @param {string} tab      — 'basic' | 'filters' | 'effects'
+ */
+function switchLayerTab(layerNum, tab) {
+    const container = $(`layer-controls-${layerNum}`);
+    if (!container) return;
+
+    container.querySelectorAll('.layer-tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tab);
+    });
+    container.querySelectorAll('.layer-tab-content').forEach(content => {
+        content.classList.toggle('active', content.dataset.content === tab);
+    });
+}
+
+/**
+ * Применить пресет фильтров к слою.
+ * @param {number} layerNum — 1 или 2
+ * @param {string} preset
+ */
+function applyFilterPreset(layerNum, preset) {
+    const layer = layerNum === 1 ? state.layer1 : state.layer2;
+
+    switch (preset) {
+        case 'none':
+            layer.brightness  = 0;
+            layer.contrast    = 0;
+            layer.saturation  = 0;
+            layer.temperature = 0;
+            layer.hue         = 0;
+            break;
+        case 'bw':
+            layer.saturation = -100;
+            layer.contrast   = 20;
+            break;
+        case 'sepia':
+            layer.saturation  = -50;
+            layer.temperature = 40;
+            layer.contrast    = 10;
+            break;
+        case 'warm':
+            layer.temperature = 30;
+            layer.brightness  = 10;
+            break;
+        case 'cold':
+            layer.temperature = -30;
+            layer.contrast    = 10;
+            break;
+        case 'vintage':
+            layer.saturation  = -30;
+            layer.temperature = 20;
+            layer.contrast    = -10;
+            layer.brightness  = -5;
+            break;
+    }
+
+    updateAllLayerControls(layerNum);
+    if (livePreviewEnabled) debouncedApply();
+}
+
+/**
+ * Применить пресет эффектов к слою.
+ * @param {number} layerNum — 1 или 2
+ * @param {string} effect
+ */
+function applyEffectPreset(layerNum, effect) {
+    const layer = layerNum === 1 ? state.layer1 : state.layer2;
+
+    switch (effect) {
+        case 'none':
+            layer.blur      = 0;
+            layer.sharpness = 0;
+            layer.vignette  = 0;
+            layer.hdr       = 0;
+            layer.grain     = 0;
+            break;
+        case 'soft':
+            layer.blur      = 1;
+            layer.vignette  = 20;
+            layer.brightness = 5;
+            break;
+        case 'dramatic':
+            layer.contrast  = 40;
+            layer.saturation = 20;
+            layer.vignette  = 50;
+            layer.hdr       = 60;
+            break;
+        case 'dreamy':
+            layer.blur       = 2;
+            layer.brightness = 15;
+            layer.saturation = -20;
+            layer.vignette   = 30;
+            break;
+        case 'gritty':
+            layer.grain      = 40;
+            layer.contrast   = 30;
+            layer.saturation = -20;
+            layer.sharpness  = 30;
+            break;
+        case 'cinema':
+            layer.vignette  = 40;
+            layer.contrast  = 20;
+            layer.saturation = 10;
+            layer.hdr       = 30;
+            break;
+    }
+
+    updateAllLayerControls(layerNum);
+    if (livePreviewEnabled) debouncedApply();
+}
+
+
 function resetLayerControls(slot) {
     const pfx = `layer${slot}`;
     const setSlider = (id, val, suffix) => {
@@ -1712,12 +2042,26 @@ function resetLayerControls(slot) {
             if (display) display.textContent = val + suffix;
         }
     };
-    setSlider(`${pfx}-opacity`,    100, '%');
-    setSlider(`${pfx}-scale`,      100, '%');
-    setSlider(`${pfx}-x`,            0, 'px');
-    setSlider(`${pfx}-y`,            0, 'px');
-    setSlider(`${pfx}-brightness`,   0, '');
-    setSlider(`${pfx}-contrast`,     0, '');
+    setSlider(`${pfx}-opacity`,     100, '%');
+    setSlider(`${pfx}-scale`,       100, '%');
+    setSlider(`${pfx}-x`,             0, 'px');
+    setSlider(`${pfx}-y`,             0, 'px');
+    setSlider(`${pfx}-brightness`,    0, '');
+    setSlider(`${pfx}-contrast`,      0, '');
+    setSlider(`${pfx}-saturation`,    0, '');
+    setSlider(`${pfx}-temperature`,   0, '');
+    setSlider(`${pfx}-blur`,          0, '');
+    setSlider(`${pfx}-sharpness`,     0, '');
+    setSlider(`${pfx}-vignette`,      0, '');
+    setSlider(`${pfx}-hdr`,           0, '');
+    setSlider(`${pfx}-grain`,         0, '');
+    /* Оттенок имеет особый суффикс */
+    const hueEl = $(`${pfx}-hue`);
+    if (hueEl) {
+        hueEl.value = 0;
+        const hueDisplay = $(`${pfx}-hue-value`);
+        if (hueDisplay) hueDisplay.textContent = '0°';
+    }
 }
 
 /**
@@ -1734,7 +2078,7 @@ function setupLayerControls(slot) {
         if (!slider) return;
         if (display) display.textContent = slider.value + suffix;
         slider.addEventListener('input', () => {
-            const raw = parseInt(slider.value, 10);
+            const raw = parseFloat(slider.value);
             layer[prop] = transform ? transform(raw) : raw;
             if (display) display.textContent = slider.value + suffix;
             if (livePreviewEnabled) debouncedApply();
@@ -1747,6 +2091,25 @@ function setupLayerControls(slot) {
     bindSlider(`${pfx}-y`,          'y',          'px');
     bindSlider(`${pfx}-brightness`, 'brightness', '');
     bindSlider(`${pfx}-contrast`,   'contrast',   '');
+    bindSlider(`${pfx}-saturation`, 'saturation', '');
+    bindSlider(`${pfx}-temperature`, 'temperature', '');
+    bindSlider(`${pfx}-blur`,       'blur',       '');
+    bindSlider(`${pfx}-sharpness`,  'sharpness',  '');
+    bindSlider(`${pfx}-vignette`,   'vignette',   '');
+    bindSlider(`${pfx}-hdr`,        'hdr',        '');
+    bindSlider(`${pfx}-grain`,      'grain',      '');
+
+    /* Оттенок: особый суффикс '°' */
+    const hueSlider  = $(`${pfx}-hue`);
+    const hueDisplay = $(`${pfx}-hue-value`);
+    if (hueSlider) {
+        if (hueDisplay) hueDisplay.textContent = hueSlider.value + '°';
+        hueSlider.addEventListener('input', () => {
+            layer.hue = parseFloat(hueSlider.value);
+            if (hueDisplay) hueDisplay.textContent = Math.round(layer.hue) + '°';
+            if (livePreviewEnabled) debouncedApply();
+        });
+    }
 }
 
 /* ══════════════════════════════════════════════════
@@ -1770,12 +2133,14 @@ function init() {
     const resetLayer1Btn = $('reset-layer-1');
     const resetLayer2Btn = $('reset-layer-2');
     if (resetLayer1Btn) resetLayer1Btn.addEventListener('click', () => {
-        state.layer1 = { opacity: 100, scale: 100, x: 0, y: 0, brightness: 0, contrast: 0 };
+        state.layer1 = { opacity: 100, scale: 100, x: 0, y: 0, brightness: 0, contrast: 0,
+                         saturation: 0, temperature: 0, hue: 0, blur: 0, sharpness: 0, vignette: 0, hdr: 0, grain: 0 };
         resetLayerControls(1);
         if (livePreviewEnabled) debouncedApply();
     });
     if (resetLayer2Btn) resetLayer2Btn.addEventListener('click', () => {
-        state.layer2 = { opacity: 100, scale: 100, x: 0, y: 0, brightness: 0, contrast: 0 };
+        state.layer2 = { opacity: 100, scale: 100, x: 0, y: 0, brightness: 0, contrast: 0,
+                         saturation: 0, temperature: 0, hue: 0, blur: 0, sharpness: 0, vignette: 0, hdr: 0, grain: 0 };
         resetLayerControls(2);
         if (livePreviewEnabled) debouncedApply();
     });
@@ -1908,6 +2273,27 @@ function init() {
 
     /* ── Горячие клавиши ── */
     setupKeyboardShortcuts();
+
+    /* ── Табы слоёв ── */
+    document.querySelectorAll('.layer-tab-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const controls = this.closest('.layer-controls');
+            const layerNum = controls && controls.id.includes('1') ? 1 : 2;
+            switchLayerTab(layerNum, this.dataset.tab);
+        });
+    });
+
+    /* ── Пресеты фильтров и эффектов ── */
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const layerNum = parseInt(this.dataset.layer, 10);
+            if (this.dataset.preset) {
+                applyFilterPreset(layerNum, this.dataset.preset);
+            } else if (this.dataset.effect) {
+                applyEffectPreset(layerNum, this.dataset.effect);
+            }
+        });
+    });
 
     /* Начальная настройка */
     updateSliderVisibility();
