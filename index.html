@@ -54,30 +54,25 @@
         <!-- Изображение 1 -->
         <div>
             <label for="drop-zone-1" class="visually-hidden">Зона загрузки изображения 1</label>
-            <div class="drop-zone"
+            <div class="drop-zone active"
                  id="drop-zone-1"
                  role="button"
                  tabindex="0"
-                 aria-label="Загрузить первое изображение (нажмите или перетащите файл)">
+                 aria-label="Нажмите для выбора слоя 1. Перетащите файл для загрузки.">
                 <div class="drop-hint">
                     <span class="icon" aria-hidden="true">📷</span>
                     <span class="label">Изображение 1</span>
-                    <span class="sub">Перетащите или нажмите<br>JPG, PNG, GIF, WebP · макс. 10 МБ</span>
-                    <button type="button" class="upload-btn" id="upload-btn-1" aria-label="Выбрать файл для изображения 1">
-                        📂 Выбрать файл
-                    </button>
+                    <span class="sub">Перетащите файл<br>JPG, PNG, GIF, WebP · макс. 10 МБ</span>
                 </div>
                 <img class="preview-img" id="preview-1" alt="Превью изображения 1" hidden>
                 <div class="layer-badge" aria-hidden="true">1</div>
+                <div class="active-badge" aria-hidden="true">АКТИВЕН</div>
             </div>
+            <button type="button" class="upload-btn" id="upload-btn-1" aria-label="Выбрать файл для изображения 1">
+                📂 Выбрать файл
+            </button>
             <input type="file" id="file-input-1" accept="image/jpeg,image/png,image/gif,image/webp"
                    class="visually-hidden" aria-label="Выберите первый файл">
-            <div class="scale-control">
-                <label for="scale-slider-1">🔍 Масштаб 1: <span id="scale-value-1">100%</span></label>
-                <input type="range" id="scale-slider-1" min="10" max="200" value="100" step="5"
-                       aria-label="Масштаб первого изображения"
-                       title="Изменить размер изображения от 10% до 200%">
-            </div>
             <div class="orientation-control">
                 <span class="orientation-label">Ориентация 1:</span>
                 <div class="radio-group">
@@ -91,6 +86,59 @@
                 </div>
             </div>
             <div class="image-info" id="image-info-1" aria-live="polite"></div>
+            <!-- Индивидуальные настройки слоя 1 -->
+            <div class="layer-controls" id="layer-controls-1">
+                <p class="panel-title">Слой 1</p>
+                <div class="slider-row">
+                    <div class="slider-label">
+                        <span>Непрозрачность</span>
+                        <span class="slider-value" id="layer1-opacity-value">100%</span>
+                    </div>
+                    <input type="range" id="layer1-opacity" min="0" max="100" value="100"
+                           aria-label="Непрозрачность слоя 1">
+                </div>
+                <div class="slider-row">
+                    <div class="slider-label">
+                        <span>Масштаб</span>
+                        <span class="slider-value" id="layer1-scale-value">100%</span>
+                    </div>
+                    <input type="range" id="layer1-scale" min="10" max="200" value="100" step="5"
+                           aria-label="Масштаб слоя 1">
+                </div>
+                <div class="slider-row">
+                    <div class="slider-label">
+                        <span>Позиция X</span>
+                        <span class="slider-value" id="layer1-x-value">0px</span>
+                    </div>
+                    <input type="range" id="layer1-x" min="-500" max="500" value="0"
+                           aria-label="Горизонтальное смещение слоя 1">
+                </div>
+                <div class="slider-row">
+                    <div class="slider-label">
+                        <span>Позиция Y</span>
+                        <span class="slider-value" id="layer1-y-value">0px</span>
+                    </div>
+                    <input type="range" id="layer1-y" min="-500" max="500" value="0"
+                           aria-label="Вертикальное смещение слоя 1">
+                </div>
+                <div class="slider-row">
+                    <div class="slider-label">
+                        <span>Яркость</span>
+                        <span class="slider-value" id="layer1-brightness-value">0</span>
+                    </div>
+                    <input type="range" id="layer1-brightness" min="-100" max="100" value="0"
+                           aria-label="Яркость слоя 1">
+                </div>
+                <div class="slider-row">
+                    <div class="slider-label">
+                        <span>Контраст</span>
+                        <span class="slider-value" id="layer1-contrast-value">0</span>
+                    </div>
+                    <input type="range" id="layer1-contrast" min="-100" max="100" value="0"
+                           aria-label="Контраст слоя 1">
+                </div>
+                <button type="button" class="reset-layer-btn" id="reset-layer-1">↺ Сбросить слой</button>
+            </div>
         </div>
 
         <!-- Изображение 2 -->
@@ -100,26 +148,21 @@
                  id="drop-zone-2"
                  role="button"
                  tabindex="0"
-                 aria-label="Загрузить второе изображение (нажмите или перетащите файл)">
+                 aria-label="Нажмите для выбора слоя 2. Перетащите файл для загрузки.">
                 <div class="drop-hint">
                     <span class="icon" aria-hidden="true">🖼️</span>
                     <span class="label">Изображение 2</span>
-                    <span class="sub">Перетащите или нажмите<br>JPG, PNG, GIF, WebP · макс. 10 МБ</span>
-                    <button type="button" class="upload-btn" id="upload-btn-2" aria-label="Выбрать файл для изображения 2">
-                        📂 Выбрать файл
-                    </button>
+                    <span class="sub">Перетащите файл<br>JPG, PNG, GIF, WebP · макс. 10 МБ</span>
                 </div>
                 <img class="preview-img" id="preview-2" alt="Превью изображения 2" hidden>
                 <div class="layer-badge" aria-hidden="true">2</div>
+                <div class="active-badge" aria-hidden="true">АКТИВЕН</div>
             </div>
+            <button type="button" class="upload-btn" id="upload-btn-2" aria-label="Выбрать файл для изображения 2">
+                📂 Выбрать файл
+            </button>
             <input type="file" id="file-input-2" accept="image/jpeg,image/png,image/gif,image/webp"
                    class="visually-hidden" aria-label="Выберите второй файл">
-            <div class="scale-control">
-                <label for="scale-slider-2">🔍 Масштаб 2: <span id="scale-value-2">100%</span></label>
-                <input type="range" id="scale-slider-2" min="10" max="200" value="100" step="5"
-                       aria-label="Масштаб второго изображения"
-                       title="Изменить размер изображения от 10% до 200%">
-            </div>
             <div class="orientation-control">
                 <span class="orientation-label">Ориентация 2:</span>
                 <div class="radio-group">
@@ -133,6 +176,59 @@
                 </div>
             </div>
             <div class="image-info" id="image-info-2" aria-live="polite"></div>
+            <!-- Индивидуальные настройки слоя 2 -->
+            <div class="layer-controls inactive" id="layer-controls-2">
+                <p class="panel-title">Слой 2</p>
+                <div class="slider-row">
+                    <div class="slider-label">
+                        <span>Непрозрачность</span>
+                        <span class="slider-value" id="layer2-opacity-value">100%</span>
+                    </div>
+                    <input type="range" id="layer2-opacity" min="0" max="100" value="100"
+                           aria-label="Непрозрачность слоя 2">
+                </div>
+                <div class="slider-row">
+                    <div class="slider-label">
+                        <span>Масштаб</span>
+                        <span class="slider-value" id="layer2-scale-value">100%</span>
+                    </div>
+                    <input type="range" id="layer2-scale" min="10" max="200" value="100" step="5"
+                           aria-label="Масштаб слоя 2">
+                </div>
+                <div class="slider-row">
+                    <div class="slider-label">
+                        <span>Позиция X</span>
+                        <span class="slider-value" id="layer2-x-value">0px</span>
+                    </div>
+                    <input type="range" id="layer2-x" min="-500" max="500" value="0"
+                           aria-label="Горизонтальное смещение слоя 2">
+                </div>
+                <div class="slider-row">
+                    <div class="slider-label">
+                        <span>Позиция Y</span>
+                        <span class="slider-value" id="layer2-y-value">0px</span>
+                    </div>
+                    <input type="range" id="layer2-y" min="-500" max="500" value="0"
+                           aria-label="Вертикальное смещение слоя 2">
+                </div>
+                <div class="slider-row">
+                    <div class="slider-label">
+                        <span>Яркость</span>
+                        <span class="slider-value" id="layer2-brightness-value">0</span>
+                    </div>
+                    <input type="range" id="layer2-brightness" min="-100" max="100" value="0"
+                           aria-label="Яркость слоя 2">
+                </div>
+                <div class="slider-row">
+                    <div class="slider-label">
+                        <span>Контраст</span>
+                        <span class="slider-value" id="layer2-contrast-value">0</span>
+                    </div>
+                    <input type="range" id="layer2-contrast" min="-100" max="100" value="0"
+                           aria-label="Контраст слоя 2">
+                </div>
+                <button type="button" class="reset-layer-btn" id="reset-layer-2">↺ Сбросить слой</button>
+            </div>
         </div>
 
         <!-- ── Панель управления ── -->

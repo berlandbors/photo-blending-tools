@@ -640,45 +640,6 @@ input[type="range"]:focus::-moz-range-thumb {
 }
 
 /* ══════════════════════════════════════════════════════
-   Кнопка загрузки файла
-══════════════════════════════════════════════════════ */
-.upload-btn {
-    margin-top: 12px;
-    padding: 10px 20px;
-    background: var(--color-accent);
-    color: #ffffff;
-    border: none;
-    border-radius: var(--radius-sm);
-    font-size: 0.9rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all var(--transition);
-    box-shadow: var(--shadow-sm);
-    pointer-events: auto;
-    z-index: 10;
-}
-
-.upload-btn:hover {
-    background: var(--color-accent-hover);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-md);
-}
-
-.upload-btn:active {
-    transform: translateY(0);
-}
-
-.upload-btn:focus {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 2px;
-}
-
-/* Скрыть кнопку, когда показан preview */
-.drop-zone:has(.preview-img:not([hidden])) .upload-btn {
-    display: none;
-}
-
-/* ══════════════════════════════════════════════════════
    Слой-значок (badge)
 ══════════════════════════════════════════════════════ */
 .layer-badge {
@@ -707,8 +668,126 @@ input[type="range"]:focus::-moz-range-thumb {
 }
 
 /* ══════════════════════════════════════════════════════
-   Управление слоями
+   Активный слой — индикатор
 ══════════════════════════════════════════════════════ */
+
+/* Рамка активного слоя */
+.drop-zone.active {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.3);
+}
+
+/* Неактивный слой — лёгкое затемнение превью */
+.drop-zone:not(.active) .preview-img {
+    opacity: 0.7;
+    filter: grayscale(20%);
+    transition: opacity var(--transition), filter var(--transition);
+}
+
+/* Бейдж «АКТИВЕН» */
+.active-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: var(--color-accent);
+    color: #fff;
+    padding: 3px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    z-index: 10;
+    opacity: 0;
+    transition: opacity var(--transition);
+    pointer-events: none;
+}
+
+.drop-zone.active .active-badge {
+    opacity: 1;
+}
+
+/* ══════════════════════════════════════════════════════
+   Кнопка загрузки (вне drop-zone)
+══════════════════════════════════════════════════════ */
+.upload-btn {
+    display: block;
+    width: 100%;
+    margin-top: 8px;
+    padding: 9px 14px;
+    background: var(--color-surface-2);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition);
+    text-align: center;
+}
+
+.upload-btn:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+    background: rgba(88, 166, 255, 0.08);
+}
+
+.upload-btn:focus {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+}
+
+/* ══════════════════════════════════════════════════════
+   Per-layer controls panel
+══════════════════════════════════════════════════════ */
+.layer-controls {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: opacity var(--transition);
+}
+
+.layer-controls .panel-title {
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: 6px;
+    margin-bottom: 2px;
+    font-size: 0.75rem;
+}
+
+.layer-controls.inactive {
+    opacity: 0.45;
+    pointer-events: none;
+}
+
+/* Кнопка сброса слоя */
+.reset-layer-btn {
+    margin-top: 4px;
+    padding: 7px 12px;
+    background: var(--color-surface-2);
+    color: var(--color-text-muted);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all var(--transition);
+    align-self: flex-start;
+}
+
+.reset-layer-btn:hover {
+    border-color: var(--color-error);
+    color: var(--color-error);
+    background: rgba(248, 81, 73, 0.08);
+}
+
+.reset-layer-btn:focus {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+}
 .layer-order-control {
     display: flex;
     flex-direction: column;
@@ -794,7 +873,9 @@ input[type="range"]:focus::-moz-range-thumb {
     }
     .upload-btn,
     .radio-label,
-    .layer-badge {
+    .layer-badge,
+    .active-badge,
+    .layer-controls {
         transition: none;
         animation: none;
     }
