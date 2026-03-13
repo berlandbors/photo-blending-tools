@@ -669,6 +669,7 @@ function renderOpacity() {
 
     resultCtx.globalAlpha = bottom.opacity;
     resultCtx.drawImage(bottom.src, bottom.x, bottom.y, bottom.width, bottom.height);
+    resultCtx.globalAlpha = 1;
 
     const alpha = (parseInt(opacitySlider.value, 10) / 100) * top.opacity;
     resultCtx.globalAlpha = alpha;
@@ -696,6 +697,7 @@ function renderCSSBlend(mode) {
 
     resultCtx.globalAlpha = bottom.opacity;
     resultCtx.drawImage(bottom.src, bottom.x, bottom.y, bottom.width, bottom.height);
+    resultCtx.globalAlpha = 1;
     resultCtx.globalCompositeOperation = mode;
     resultCtx.globalAlpha = top.opacity;
     resultCtx.drawImage(top.src, top.x, top.y, top.width, top.height);
@@ -1142,7 +1144,7 @@ function toggleComparisonMode() {
         const s1 = getProcessedLayer(1);
         if (s1) {
             comparisonBefore.getContext('2d').drawImage(
-                s1.src, s1.x, s1.y, resultCanvas.width, resultCanvas.height);
+                s1.src, s1.x, s1.y, s1.width, s1.height);
         }
         /* Сохраняем «после» — текущий результат */
         comparisonAfter = document.createElement('canvas');
