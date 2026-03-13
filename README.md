@@ -19,6 +19,9 @@
 | **Масштабирование** | Независимое изменение размера каждой фотографии (10%–200%) |
 | **Ориентация** | Автоопределение и ручной выбор альбомной/книжной ориентации |
 | **Улучшенные слайдеры** | Точный контроль без случайных перескоков |
+| **Скролл боковой панели** | Плавная прокрутка при большом количестве элементов управления |
+| **Кнопки загрузки** | Явные кнопки для выбора файлов в дополнение к drag & drop |
+| **Управление слоями** | Выбор порядка наложения изображений (какое сверху/снизу) |
 
 ### Canvas Blending — алгоритмы
 
@@ -115,6 +118,9 @@ A fully-featured browser-based photo blending tool — no installation required.
 - **Scaling** — independent resize of each photo (10%–200%)
 - **Orientation** — auto-detection and manual selection of landscape/portrait
 - **Improved sliders** — no accidental jumps when clicking on the track
+- **Scrollable sidebar** — smooth scrolling when the panel overflows
+- **Upload buttons** — explicit file-picker buttons alongside drag & drop
+- **Layer order** — choose which image is on top/bottom during blending
 
 ### Usage
 1. Open `index.html` in a modern browser.

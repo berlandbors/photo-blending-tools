@@ -55,8 +55,12 @@
                     <span class="icon" aria-hidden="true">📷</span>
                     <span class="label">Изображение 1</span>
                     <span class="sub">Перетащите или нажмите<br>JPG, PNG, GIF, WebP · макс. 10 МБ</span>
+                    <button type="button" class="upload-btn" id="upload-btn-1" aria-label="Выбрать файл для изображения 1">
+                        📂 Выбрать файл
+                    </button>
                 </div>
                 <img class="preview-img" id="preview-1" alt="Превью изображения 1" hidden>
+                <div class="layer-badge" aria-hidden="true">1</div>
             </div>
             <input type="file" id="file-input-1" accept="image/jpeg,image/png,image/gif,image/webp"
                    class="visually-hidden" aria-label="Выберите первый файл">
@@ -93,8 +97,12 @@
                     <span class="icon" aria-hidden="true">🖼️</span>
                     <span class="label">Изображение 2</span>
                     <span class="sub">Перетащите или нажмите<br>JPG, PNG, GIF, WebP · макс. 10 МБ</span>
+                    <button type="button" class="upload-btn" id="upload-btn-2" aria-label="Выбрать файл для изображения 2">
+                        📂 Выбрать файл
+                    </button>
                 </div>
                 <img class="preview-img" id="preview-2" alt="Превью изображения 2" hidden>
+                <div class="layer-badge" aria-hidden="true">2</div>
             </div>
             <input type="file" id="file-input-2" accept="image/jpeg,image/png,image/gif,image/webp"
                    class="visually-hidden" aria-label="Выберите второй файл">
@@ -180,6 +188,31 @@
                     </optgroup>
 
                 </select>
+            </div>
+
+            <!-- Порядок слоев -->
+            <div class="control-group">
+                <span class="control-label">
+                    <span aria-hidden="true">📚</span>
+                    Порядок слоев
+                </span>
+                <div class="layer-order-control" role="radiogroup" aria-label="Порядок наложения слоев">
+                    <label class="radio-label">
+                        <input type="radio" name="layer-order" value="img1-top" id="layer-order-1" checked>
+                        <span>🖼️ Изображение 1 сверху</span>
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="layer-order" value="img2-top" id="layer-order-2">
+                        <span>🖼️ Изображение 2 сверху</span>
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="layer-order" value="auto" id="layer-order-auto">
+                        <span>✨ Автоматически</span>
+                    </label>
+                </div>
+                <button type="button" class="swap-layers-btn" id="swap-layers" aria-label="Поменять слои местами">
+                    ⇅ Поменять местами
+                </button>
             </div>
 
             <hr class="divider">
