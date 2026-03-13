@@ -87,8 +87,8 @@
             </div>
             <div class="image-info" id="image-info-1" aria-live="polite"></div>
             <!-- Индивидуальные настройки слоя 1 -->
-            <div class="layer-controls" id="layer-controls-1">
-                <p class="panel-title">Слой 1</p>
+            <details class="layer-controls" id="layer-controls-1" open>
+                <summary>🎨 Слой 1</summary>
                 <div class="slider-row">
                     <div class="slider-label">
                         <span>Непрозрачность</span>
@@ -138,7 +138,7 @@
                            aria-label="Контраст слоя 1">
                 </div>
                 <button type="button" class="reset-layer-btn" id="reset-layer-1">↺ Сбросить слой</button>
-            </div>
+            </details>
         </div>
 
         <!-- Изображение 2 -->
@@ -177,8 +177,8 @@
             </div>
             <div class="image-info" id="image-info-2" aria-live="polite"></div>
             <!-- Индивидуальные настройки слоя 2 -->
-            <div class="layer-controls inactive" id="layer-controls-2">
-                <p class="panel-title">Слой 2</p>
+            <details class="layer-controls inactive" id="layer-controls-2">
+                <summary>🖼️ Слой 2</summary>
                 <div class="slider-row">
                     <div class="slider-label">
                         <span>Непрозрачность</span>
@@ -228,8 +228,11 @@
                            aria-label="Контраст слоя 2">
                 </div>
                 <button type="button" class="reset-layer-btn" id="reset-layer-2">↺ Сбросить слой</button>
-            </div>
+            </details>
         </div>
+
+        <hr class="divider">
+        <p class="panel-section-title">⚙️ Общие настройки</p>
 
         <!-- ── Панель управления ── -->
         <section class="control-panel" aria-label="Настройки смешивания">
@@ -346,28 +349,6 @@
                 </div>
                 <input type="range" id="blend-amount-slider" min="0" max="100" value="100"
                        aria-label="Интенсивность смешивания" aria-valuemin="0" aria-valuemax="100">
-            </div>
-
-            <hr class="divider">
-
-            <!-- Яркость -->
-            <div class="slider-row">
-                <div class="slider-label">
-                    <span>Яркость</span>
-                    <span class="slider-value" id="brightness-value">0</span>
-                </div>
-                <input type="range" id="brightness-slider" min="-100" max="100" value="0"
-                       aria-label="Яркость" aria-valuemin="-100" aria-valuemax="100">
-            </div>
-
-            <!-- Контраст -->
-            <div class="slider-row">
-                <div class="slider-label">
-                    <span>Контраст</span>
-                    <span class="slider-value" id="contrast-value">100%</span>
-                </div>
-                <input type="range" id="contrast-slider" min="0" max="200" value="100"
-                       aria-label="Контраст" aria-valuemin="0" aria-valuemax="200">
             </div>
 
             <hr class="divider">
