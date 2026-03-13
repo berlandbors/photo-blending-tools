@@ -29,6 +29,10 @@ const state = {
     image2: null,          // HTMLImageElement
     splitPos: 50,          // позиция разделителя (0–100)
     isDraggingSplit: false,
+    scale1: 1.0,           // масштаб первого изображения (1.0 = 100%)
+    scale2: 1.0,           // масштаб второго изображения
+    orientation1: 'auto',  // 'auto' | 'landscape' | 'portrait'
+    orientation2: 'auto',
 };
 
 /* ══════════════════════════════════════════════════
@@ -53,6 +57,13 @@ const opacityValue      = $('opacity-value');
 const brightnessValue   = $('brightness-value');
 const contrastValue     = $('contrast-value');
 const blendAmountValue  = $('blend-amount-value');
+
+const scaleSlider1  = $('scale-slider-1');
+const scaleSlider2  = $('scale-slider-2');
+const scaleValue1   = $('scale-value-1');
+const scaleValue2   = $('scale-value-2');
+const imageInfo1    = $('image-info-1');
+const imageInfo2    = $('image-info-2');
 
 const applyBtn       = $('apply-btn');
 const downloadPngBtn = $('download-png');
@@ -148,6 +159,118 @@ function generateFilename(ext) {
 }
 
 /* ══════════════════════════════════════════════════
+   Ориентация и масштаб изображений
+══════════════════════════════════════════════════ */
+
+const ORIENTATION_LABELS = {
+    landscape: 'Альбомная',
+    portrait:  'Книжная',
+    square:    'Квадратная',
+};
+
+/**
+ * Определить ориентацию изображения по его размерам
+ * @param {HTMLImageElement} img
+ * @returns {'landscape'|'portrait'|'square'}
+ */
+function getOrientation(img) {
+    if (img.naturalWidth > img.naturalHeight) return 'landscape';
+    if (img.naturalHeight > img.naturalWidth) return 'portrait';
+    return 'square';
+}
+
+/**
+ * Повернуть изображение на 90° для получения нужной ориентации.
+ * Возвращает исходный элемент, если поворот не требуется.
+ * @param {HTMLImageElement|HTMLCanvasElement} img
+ * @param {'auto'|'landscape'|'portrait'} targetOrientation
+ * @returns {HTMLImageElement|HTMLCanvasElement}
+ */
+function rotateImage(img, targetOrientation) {
+    if (targetOrientation === 'auto') return img;
+
+    const w = img.naturalWidth  || img.width;
+    const h = img.naturalHeight || img.height;
+    const currentOrientation = w > h ? 'landscape' : h > w ? 'portrait' : 'square';
+
+    /* Поворот не нужен, если ориентация уже совпадает или изображение квадратное */
+    if (currentOrientation === 'square' || currentOrientation === targetOrientation) return img;
+
+    /* Создаём временный canvas, поворачиваем на 90° по часовой стрелке */
+    const tempCanvas = document.createElement('canvas');
+    const ctx = tempCanvas.getContext('2d');
+    tempCanvas.width  = h;
+    tempCanvas.height = w;
+    ctx.translate(h / 2, w / 2);
+    ctx.rotate(Math.PI / 2);
+    ctx.drawImage(img, -w / 2, -h / 2);
+    return tempCanvas;
+}
+
+/**
+ * Получить источник изображения с применёнными ориентацией и масштабом.
+ * Если трансформация не нужна, возвращает исходный элемент без лишних операций.
+ * @param {number} slot — 1 или 2
+ * @returns {{ src: HTMLImageElement|HTMLCanvasElement, width: number, height: number }|null}
+ */
+function getScaledSource(slot) {
+    const img         = slot === 1 ? state.image1       : state.image2;
+    const orientation = slot === 1 ? state.orientation1 : state.orientation2;
+    const scale       = slot === 1 ? state.scale1       : state.scale2;
+
+    if (!img) return null;
+
+    /* Применить ориентацию */
+    const oriented = rotateImage(img, orientation);
+
+    const srcW = oriented.naturalWidth  || oriented.width;
+    const srcH = oriented.naturalHeight || oriented.height;
+    const scaledW = Math.max(10, Math.round(srcW * scale));
+    const scaledH = Math.max(10, Math.round(srcH * scale));
+
+    /* Если трансформация не нужна, возвращаем оригинал с его размерами */
+    if (scale === 1.0 && orientation === 'auto') {
+        return { src: img, width: img.naturalWidth, height: img.naturalHeight };
+    }
+
+    /* Предварительно рендерим в canvas нужного размера */
+    const canvas = document.createElement('canvas');
+    canvas.width  = scaledW;
+    canvas.height = scaledH;
+    canvas.getContext('2d').drawImage(oriented, 0, 0, scaledW, scaledH);
+    return { src: canvas, width: scaledW, height: scaledH };
+}
+
+/**
+ * Обновить строку с информацией о размерах и ориентации изображения
+ * @param {number} slot — 1 или 2
+ */
+function updateImageInfo(slot) {
+    const img  = slot === 1 ? state.image1    : state.image2;
+    const info = slot === 1 ? imageInfo1      : imageInfo2;
+
+    if (!img) {
+        info.textContent = '';
+        return;
+    }
+
+    const orientation  = slot === 1 ? state.orientation1 : state.orientation2;
+    const naturalOri   = getOrientation(img);
+    const effectiveOri = orientation === 'auto' ? naturalOri : orientation;
+    const label        = ORIENTATION_LABELS[effectiveOri] || effectiveOri;
+
+    /* Dimensions swap only when the image is actually rotated:
+       rotation happens when target differs from natural and image is not square */
+    const rotated = naturalOri !== 'square'
+        && orientation !== 'auto'
+        && naturalOri !== orientation;
+    const w = rotated ? img.naturalHeight : img.naturalWidth;
+    const h = rotated ? img.naturalWidth  : img.naturalHeight;
+
+    info.textContent = `${w}×${h} px (${label})`;
+}
+
+/* ══════════════════════════════════════════════════
    Зоны загрузки изображений
 ══════════════════════════════════════════════════ */
 
@@ -203,11 +326,13 @@ async function handleFile(file, slot) {
             preview1.src     = img.src;
             preview1.hidden  = false;
             $('drop-zone-1').querySelector('.drop-hint').hidden = true;
+            updateImageInfo(1);
         } else {
             state.image2 = img;
             preview2.src     = img.src;
             preview2.hidden  = false;
             $('drop-zone-2').querySelector('.drop-hint').hidden = true;
+            updateImageInfo(2);
         }
         showStatus(`Изображение ${slot} загружено (${img.naturalWidth}×${img.naturalHeight} px)`, 'success');
         debouncedApply();
@@ -320,50 +445,62 @@ const debouncedApply = debounce(apply, DEBOUNCE_DELAY_MS);
 ══════════════════════════════════════════════════ */
 
 function renderCollage(mode) {
-    const imgs = [state.image1, state.image2].filter(Boolean);
-    if (imgs.length === 0) return;
-
-    const CELL_W = 600;
-    const CELL_H = 450;
+    const s1 = getScaledSource(1);
+    const s2 = getScaledSource(2);
+    const sources = [s1, s2].filter(Boolean);
+    if (sources.length === 0) return;
 
     switch (mode) {
         case 'collage-h': {
-            resultCanvas.width  = CELL_W * imgs.length;
-            resultCanvas.height = CELL_H;
-            imgs.forEach((img, i) => {
-                resultCtx.drawImage(img, i * CELL_W, 0, CELL_W, CELL_H);
+            const W = sources.reduce((sum, s) => sum + s.width, 0);
+            const H = Math.max(...sources.map(s => s.height));
+            resultCanvas.width  = W;
+            resultCanvas.height = H;
+            let x = 0;
+            sources.forEach(s => {
+                resultCtx.drawImage(s.src, x, 0, s.width, s.height);
+                x += s.width;
             });
             break;
         }
         case 'collage-v': {
-            resultCanvas.width  = CELL_W;
-            resultCanvas.height = CELL_H * imgs.length;
-            imgs.forEach((img, i) => {
-                resultCtx.drawImage(img, 0, i * CELL_H, CELL_W, CELL_H);
+            const W = Math.max(...sources.map(s => s.width));
+            const H = sources.reduce((sum, s) => sum + s.height, 0);
+            resultCanvas.width  = W;
+            resultCanvas.height = H;
+            let y = 0;
+            sources.forEach(s => {
+                resultCtx.drawImage(s.src, 0, y, s.width, s.height);
+                y += s.height;
             });
             break;
         }
         case 'collage-grid2': {
             /* 2×2: нужны 2 изображения — клонируем */
-            const cells = [imgs[0], imgs[1] || imgs[0], imgs[1] || imgs[0], imgs[0]];
-            resultCanvas.width  = CELL_W * 2;
-            resultCanvas.height = CELL_H * 2;
-            cells.forEach((img, i) => {
+            const cells = [s1, s2 || s1, s2 || s1, s1].filter(Boolean);
+            const CW = Math.max(...cells.map(s => s.width));
+            const CH = Math.max(...cells.map(s => s.height));
+            resultCanvas.width  = CW * 2;
+            resultCanvas.height = CH * 2;
+            cells.forEach((s, i) => {
                 const col = i % 2;
                 const row = Math.floor(i / 2);
-                resultCtx.drawImage(img, col * CELL_W, row * CELL_H, CELL_W, CELL_H);
+                resultCtx.drawImage(s.src, col * CW, row * CH, CW, CH);
             });
             break;
         }
         case 'collage-grid3': {
             /* 3×3: заполняем чередованием */
-            resultCanvas.width  = CELL_W * 3;
-            resultCanvas.height = CELL_H * 3;
+            const allSrc = [s1, s2].filter(Boolean);
+            const CW = Math.max(...allSrc.map(s => s.width));
+            const CH = Math.max(...allSrc.map(s => s.height));
+            resultCanvas.width  = CW * 3;
+            resultCanvas.height = CH * 3;
             for (let i = 0; i < 9; i++) {
-                const img = imgs[i % imgs.length];
+                const s = allSrc[i % allSrc.length];
                 const col = i % 3;
                 const row = Math.floor(i / 3);
-                resultCtx.drawImage(img, col * CELL_W, row * CELL_H, CELL_W, CELL_H);
+                resultCtx.drawImage(s.src, col * CW, row * CH, CW, CH);
             }
             break;
         }
@@ -375,23 +512,23 @@ function renderCollage(mode) {
 ══════════════════════════════════════════════════ */
 
 function renderOpacity() {
-    const img1 = state.image1;
-    const img2 = state.image2;
-    if (!img1 || !img2) {
+    const s1 = getScaledSource(1);
+    const s2 = getScaledSource(2);
+    if (!s1 || !s2) {
         showStatus('Для этого режима нужны оба изображения.', 'info');
         return;
     }
-    const W = Math.max(img1.naturalWidth,  img2.naturalWidth);
-    const H = Math.max(img1.naturalHeight, img2.naturalHeight);
+    const W = Math.max(s1.width,  s2.width);
+    const H = Math.max(s1.height, s2.height);
 
     resultCanvas.width  = W;
     resultCanvas.height = H;
 
-    resultCtx.drawImage(img1, 0, 0, W, H);
+    resultCtx.drawImage(s1.src, 0, 0, s1.width, s1.height);
 
     const alpha = parseInt(opacitySlider.value, 10) / 100;
     resultCtx.globalAlpha = alpha;
-    resultCtx.drawImage(img2, 0, 0, W, H);
+    resultCtx.drawImage(s2.src, 0, 0, s2.width, s2.height);
     resultCtx.globalAlpha = 1;
 }
 
@@ -400,21 +537,21 @@ function renderOpacity() {
 ══════════════════════════════════════════════════ */
 
 function renderCSSBlend(mode) {
-    const img1 = state.image1;
-    const img2 = state.image2;
-    if (!img1 || !img2) {
+    const s1 = getScaledSource(1);
+    const s2 = getScaledSource(2);
+    if (!s1 || !s2) {
         showStatus('Для этого режима нужны оба изображения.', 'info');
         return;
     }
-    const W = Math.max(img1.naturalWidth,  img2.naturalWidth);
-    const H = Math.max(img1.naturalHeight, img2.naturalHeight);
+    const W = Math.max(s1.width,  s2.width);
+    const H = Math.max(s1.height, s2.height);
 
     resultCanvas.width  = W;
     resultCanvas.height = H;
 
-    resultCtx.drawImage(img1, 0, 0, W, H);
+    resultCtx.drawImage(s1.src, 0, 0, s1.width, s1.height);
     resultCtx.globalCompositeOperation = mode;
-    resultCtx.drawImage(img2, 0, 0, W, H);
+    resultCtx.drawImage(s2.src, 0, 0, s2.width, s2.height);
     resultCtx.globalCompositeOperation = 'source-over';
 }
 
@@ -423,9 +560,9 @@ function renderCSSBlend(mode) {
 ══════════════════════════════════════════════════ */
 
 function renderCanvasBlend(mode) {
-    const img1 = state.image1;
-    const img2 = state.image2;
-    if (!img1 || !img2) {
+    const s1 = getScaledSource(1);
+    const s2 = getScaledSource(2);
+    if (!s1 || !s2) {
         showStatus('Для этого режима нужны оба изображения.', 'info');
         return;
     }
@@ -444,7 +581,7 @@ function renderCanvasBlend(mode) {
         threshold:   80,
     };
 
-    const out = window.BlendingEngine.blendImages(img1, img2, internalMode, opts);
+    const out = window.BlendingEngine.blendImages(s1.src, s2.src, internalMode, opts);
     resultCanvas.width  = out.width;
     resultCanvas.height = out.height;
     resultCtx.drawImage(out, 0, 0);
@@ -455,14 +592,14 @@ function renderCanvasBlend(mode) {
 ══════════════════════════════════════════════════ */
 
 function renderDoubleExposure() {
-    const img1 = state.image1;
-    const img2 = state.image2;
-    if (!img1 || !img2) {
+    const s1 = getScaledSource(1);
+    const s2 = getScaledSource(2);
+    if (!s1 || !s2) {
         showStatus('Для двойного экспонирования нужны оба изображения.', 'info');
         return;
     }
     const opts = { blendAmount: parseInt(blendAmountSlider.value, 10) };
-    const out  = window.BlendingEngine.doubleExposure(img1, img2, opts);
+    const out  = window.BlendingEngine.doubleExposure(s1.src, s2.src, opts);
     resultCanvas.width  = out.width;
     resultCanvas.height = out.height;
     resultCtx.drawImage(out, 0, 0);
@@ -473,14 +610,14 @@ function renderDoubleExposure() {
 ══════════════════════════════════════════════════ */
 
 function renderSplitScreen(mode) {
-    const img1 = state.image1;
-    const img2 = state.image2;
-    if (!img1 || !img2) {
+    const s1 = getScaledSource(1);
+    const s2 = getScaledSource(2);
+    if (!s1 || !s2) {
         showStatus('Для Split Screen нужны оба изображения.', 'info');
         return;
     }
-    const W = Math.max(img1.naturalWidth,  img2.naturalWidth);
-    const H = Math.max(img1.naturalHeight, img2.naturalHeight);
+    const W = Math.max(s1.width,  s2.width);
+    const H = Math.max(s1.height, s2.height);
 
     resultCanvas.width  = W;
     resultCanvas.height = H;
@@ -490,12 +627,12 @@ function renderSplitScreen(mode) {
     if (mode === 'split-v') {
         /* Вертикальный разделитель */
         const splitX = Math.round(W * pos);
-        resultCtx.drawImage(img1, 0, 0, W, H);
+        resultCtx.drawImage(s1.src, 0, 0, s1.width, s1.height);
         resultCtx.save();
         resultCtx.beginPath();
         resultCtx.rect(splitX, 0, W - splitX, H);
         resultCtx.clip();
-        resultCtx.drawImage(img2, 0, 0, W, H);
+        resultCtx.drawImage(s2.src, 0, 0, s2.width, s2.height);
         resultCtx.restore();
 
         /* Линия разделителя */
@@ -508,12 +645,12 @@ function renderSplitScreen(mode) {
     } else {
         /* Горизонтальный разделитель */
         const splitY = Math.round(H * pos);
-        resultCtx.drawImage(img1, 0, 0, W, H);
+        resultCtx.drawImage(s1.src, 0, 0, s1.width, s1.height);
         resultCtx.save();
         resultCtx.beginPath();
         resultCtx.rect(0, splitY, W, H - splitY);
         resultCtx.clip();
-        resultCtx.drawImage(img2, 0, 0, W, H);
+        resultCtx.drawImage(s2.src, 0, 0, s2.width, s2.height);
         resultCtx.restore();
 
         resultCtx.strokeStyle = 'rgba(255,255,255,0.8)';
@@ -620,9 +757,13 @@ function downloadCanvas(mimeType, ext) {
 ══════════════════════════════════════════════════ */
 
 function resetAll() {
-    state.image1   = null;
-    state.image2   = null;
-    state.splitPos = 50;
+    state.image1      = null;
+    state.image2      = null;
+    state.splitPos    = 50;
+    state.scale1      = 1.0;
+    state.scale2      = 1.0;
+    state.orientation1 = 'auto';
+    state.orientation2 = 'auto';
 
     /* Очищаем превью */
     [preview1, preview2].forEach(p => { p.src = ''; p.hidden = true; });
@@ -635,10 +776,26 @@ function resetAll() {
     brightnessSlider.value   = 0;
     contrastSlider.value     = 100;
     blendAmountSlider.value  = 100;
-    opacityValue.textContent    = '50%';
-    brightnessValue.textContent = '0';
-    contrastValue.textContent   = '100%';
+    scaleSlider1.value       = 100;
+    scaleSlider2.value       = 100;
+    opacityValue.textContent     = '50%';
+    brightnessValue.textContent  = '0';
+    contrastValue.textContent    = '100%';
     blendAmountValue.textContent = '100%';
+    scaleValue1.textContent      = '100%';
+    scaleValue2.textContent      = '100%';
+
+    /* Сбрасываем ориентацию */
+    document.querySelectorAll('input[name="orientation-1"]').forEach(r => {
+        r.checked = r.value === 'auto';
+    });
+    document.querySelectorAll('input[name="orientation-2"]').forEach(r => {
+        r.checked = r.value === 'auto';
+    });
+
+    /* Очищаем информацию об изображениях */
+    imageInfo1.textContent = '';
+    imageInfo2.textContent = '';
 
     /* Очищаем холст */
     resultCanvas.width  = 800;
@@ -691,6 +848,36 @@ function init() {
     setupSlider(brightnessSlider,   brightnessValue,   '');
     setupSlider(contrastSlider,     contrastValue,     '%');
     setupSlider(blendAmountSlider,  blendAmountValue,  '%');
+
+    /* Слайдеры масштаба */
+    setupSlider(scaleSlider1, scaleValue1, '%');
+    setupSlider(scaleSlider2, scaleValue2, '%');
+    scaleSlider1.addEventListener('input', () => {
+        state.scale1 = parseInt(scaleSlider1.value, 10) / 100;
+        scaleValue1.textContent = scaleSlider1.value + '%';
+        debouncedApply();
+    });
+    scaleSlider2.addEventListener('input', () => {
+        state.scale2 = parseInt(scaleSlider2.value, 10) / 100;
+        scaleValue2.textContent = scaleSlider2.value + '%';
+        debouncedApply();
+    });
+
+    /* Радио-кнопки ориентации */
+    document.querySelectorAll('input[name="orientation-1"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+            state.orientation1 = radio.value;
+            updateImageInfo(1);
+            debouncedApply();
+        });
+    });
+    document.querySelectorAll('input[name="orientation-2"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+            state.orientation2 = radio.value;
+            updateImageInfo(2);
+            debouncedApply();
+        });
+    });
 
     /* Смена режима */
     modeSelect.addEventListener('change', () => {
